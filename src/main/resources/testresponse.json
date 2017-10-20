@@ -1,0 +1,65 @@
+{
+  "bucket" : [ {
+    "dataset" : [ {
+        "dataSourceId" : "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
+        "point" : [ {
+          "dataTypeName" : "com.google.step_count.delta",
+          "endTimeNanos" : "1496312500000000000",
+          "originDataSourceId" : "raw:com.google.step_count.delta:com.google.android.apps.fitness:user_input",
+          "startTimeNanos" : "1496239400000000000",
+          "value" : [ {
+            "intVal" : 65000,
+            "mapVal" : [ ]
+          } ]
+        } ]
+    } ],
+    "endTimeMillis" : "1496324547524",
+    "startTimeMillis" : "1496238147524"
+  }, {
+    "dataset" : [ {
+      "dataSourceId" : "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
+      "point" : [ ]
+    } ],
+    "endTimeMillis" : "1496410947524",
+    "startTimeMillis" : "1496324547524"
+  }, {
+    "dataset" : [ {
+      "dataSourceId" : "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
+        "point" : [ {
+          "dataTypeName" : "com.google.step_count.delta",
+          "endTimeNanos" : "1496721500000000000",
+          "originDataSourceId" : "raw:com.google.step_count.delta:com.google.android.apps.fitness:user_input",
+          "startTimeNanos" : "1496696400000000000",
+          "value" : [ {
+            "intVal" : 3000,
+            "mapVal" : [ ]
+          } ]
+        } ]
+    } ],
+    "endTimeMillis" : "1496756547524",
+    "startTimeMillis" : "1496670147524"
+  }, {
+    "dataset" : [ {
+      "dataSourceId" : "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
+      "point" : [ {
+        "dataTypeName" : "com.google.step_count.delta",
+        "endTimeNanos" : "1496821500000000000",
+        "originDataSourceId" : "raw:com.google.step_count.delta:com.google.android.apps.fitness:user_input",
+        "startTimeNanos" : "1496786400000000000",
+        "value" : [ {
+          "intVal" : 16000,
+          "mapVal" : [ ]
+        } ]
+      } ]
+    } ],
+    "endTimeMillis" : "1496842947524",
+    "startTimeMillis" : "1496756547524"
+  }, {
+    "dataset" : [ {
+      "dataSourceId" : "derived:com.google.step_count.delta:com.google.android.gms:aggregated",
+      "point" : [ ]
+    } ],
+    "endTimeMillis" : "1496929347524",
+    "startTimeMillis" : "1496842947524"
+  } ]
+}

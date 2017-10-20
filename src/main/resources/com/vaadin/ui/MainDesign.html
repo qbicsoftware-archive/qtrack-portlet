@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+ <head>
+  <meta charset="UTF-8">
+  <meta name="design-properties" content="{&quot;RULERS_VISIBLE&quot;:true,&quot;GUIDELINES_VISIBLE&quot;:false,&quot;SNAP_TO_OBJECTS&quot;:true,&quot;SNAP_TO_GRID&quot;:true,&quot;SNAPPING_DISTANCE&quot;:10,&quot;GENERATE_GETTERS&quot;:false,&quot;JAVA_SOURCES_ROOT&quot;:&quot;src/main/java&quot;,&quot;THEME&quot;:&quot;mytheme&quot;}">
+  <meta name="vaadin-version" content="8.0.5">
+ </head>
+ <body>
+  <vaadin-horizontal-layout style-name="app-shell" spacing="false" responsive size-full>
+   <vaadin-css-layout style-name="navigation-bar-container" width="200px" height-full>
+    <vaadin-css-layout style-name="navigation-bar" size-full>
+     <vaadin-label style-name="logo" responsive width="80px" plain-text>
+       TrackFit 
+     </vaadin-label>
+     <vaadin-vertical-layout>
+      <vaadin-css-layout :middle :center>
+       <vaadin-image style-name="user-image" alt="" _id="image"></vaadin-image>
+      </vaadin-css-layout>
+      <vaadin-label style-name="logo" responsive width-full plain-text _id="nameLabel">
+        User Name 
+      </vaadin-label>
+     </vaadin-vertical-layout>
+     <vaadin-button icon="fonticon://Vaadin-Icons/e7b3" style-name="menu borderless" plain-text _id="menuButton">
+       Menu 
+     </vaadin-button>
+     <vaadin-css-layout style-name="navigation" width-full _id="menu">
+      <vaadin-button icon="fonticon://Vaadin-Icons/e7e9" style-name="borderless" width-full plain-text _id="dashboard">
+        Dashboard 
+      </vaadin-button>
+      <vaadin-button icon="fonticon://Vaadin-Icons/e68e" style-name="borderless" width-full plain-text _id="reports">
+        Reports 
+      </vaadin-button>
+      <vaadin-button icon="fonticon://Vaadin-Icons/e6c0" style-name="borderless" width-full plain-text _id="customize">
+        Customize 
+      </vaadin-button>
+      <vaadin-button icon="fonticon://Vaadin-Icons/e7d3" style-name="borderless" width-full plain-text _id="admin">
+        Admin 
+      </vaadin-button>
+      <vaadin-button icon="fonticon://Vaadin-Icons/e798" style-name="borderless" width-full plain-text _id="logout">
+        Logout 
+      </vaadin-button>
+     </vaadin-css-layout>
+    </vaadin-css-layout>
+   </vaadin-css-layout>
+   <vaadin-vertical-layout style-name="content-container" spacing="false" size-full margin="false" :expand>
+    <vaadin-horizontal-layout width-full>
+     <vaadin-label style-name="view-title" width-full plain-text _id="viewTitle">
+       Overview 
+     </vaadin-label>
+     <vaadin-radio-button-group style-name="horizontal" data-item-type="java.lang.String" _id="timeRadioButtonGroup" :middle>
+      <option item="Weekly">Weekly</option>
+      <option item="Monthly">Monthly</option>
+      <option item="Yearly">Yearly</option>
+     </vaadin-radio-button-group>
+    </vaadin-horizontal-layout>
+    <vaadin-css-layout size-full _id="content" :expand>
+     <vaadin-css-layout style-name="padding-right padding-bottom padding-left" size-full>
+      <vaadin-css-layout style-name="content-section padding" id="contentArea" size-full _id="contentArea"></vaadin-css-layout>
+     </vaadin-css-layout>
+    </vaadin-css-layout>
+   </vaadin-vertical-layout>
+  </vaadin-horizontal-layout>
+ </body>
+</html>
