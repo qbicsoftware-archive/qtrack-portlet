@@ -1,6 +1,5 @@
 package com.vaadin.ui;
 
-import com.google.api.client.auth.oauth2.Credential;
 import com.vaadin.data.HasValue;
 import com.vaadin.model.DataRequest;
 import com.vaadin.model.DbConnector;
@@ -17,43 +16,56 @@ import java.util.Calendar;
 
 
 /**
- * Created by caspar on 08.06.17.
+ * The MainView as proposed by Vaadin (see MainDesign.html for the actual MainView):
+ * Deals with:
+ *      - setting up the application (connecting to the DB; downloading the data; setting the data for the plots)
+ *      - dealing with the listeners
  */
 public class MainView extends MainDesign implements View {
-    private String userID;
-    Credential myCredential;
-    private DbConnector dbConnector;
-    private Calendar cal;
+
+    private String userID;  // the user ID for the database connection
+    private DbConnector dbConnector; // the connector between Vaadin and MongoDB
+    private Calendar cal;   // the calender
 
     public MainView() {
+
+        // set the userID and create a instance of the dbConnector
         this.userID = (String) VaadinSession.getCurrent().getAttribute("userID");
         dbConnector = new DbConnector(userID);
-        updateUserProfile();
-        downloadData();
-        cal = Calendar.getInstance();
 
+        // sets the user profile picture and the user name to display in the application
+        updateUserDataForView();
+
+        // gets the data from the database (currently: last year)
+        getDataFromGoogleFit();
+        cal = Calendar.getInstance();   // calendar to calculate which dates to use
+
+        // create a new LineChart to display the charts
         LineChart lineChart = new LineChart();
-
-        //System.out.println(data from the lastMonth);
-        //System.out.println(lastMonth() + "   " + getNow());
-        //System.out.println(dbConnector.extractData(lastMonth(), getNow()));
-
-        // TODO: get first data session from the user
-        // TODO: change to user selection; default: lastMonth(), getNow()
-
         contentArea.addComponent(lineChart);
+
+        // set the default item for the radio button group
         timeRadioButtonGroup.setSelectedItem("Monthly");
 
-        SelectedOptions selectedOptions = new SelectedOptions(Color.RED.getCSS(),
-                new Color(70,130,180).getCSS(), String.valueOf(lastMonth()), String.valueOf(getNow()),
+        // default options for the customize tab
+        SelectedOptions selectedOptions = new SelectedOptions(Color.RED,
+                new Color(70,130,180), String.valueOf(lastMonth()), String.valueOf(getNow()),
                 "Circles", "Monthly");
 
+        // hand the data and the selected options to the line chart
         setDataForLineChart(lineChart, selectedOptions);
 
+        // add all the listener to the view
+        addListenerToView(lineChart, selectedOptions);
+    }
 
-        // listener for buttons:
-        // TODO:
-
+    /**
+     * adds all the listeners (mostly for the buttons) to the view
+     * @param lineChart: the line chart to set the data for
+     * @param selectedOptions: the object holding all the selected options
+     */
+    private void addListenerToView(LineChart lineChart, SelectedOptions selectedOptions) {
+        // change listener for the radio button group ()
         timeRadioButtonGroup.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
                 selectedOptions.setTimeSelected(valueChangeEvent.getValue());
                 setDataForLineChart(lineChart, selectedOptions);
@@ -73,7 +85,8 @@ public class MainView extends MainDesign implements View {
         });
 
         customize.addClickListener(event -> {
-            openSettingsWindow(selectedOptions);
+            // open the settings window
+            openSettingsWindow(lineChart, selectedOptions);
         });
 
         admin.addClickListener(event -> {
@@ -82,45 +95,38 @@ public class MainView extends MainDesign implements View {
         });
 
         logout.addClickListener(event -> {
-
             // get back to login page
             Page.getCurrent().setLocation( "/" );
-
             // close the vaadin session
             VaadinSession.getCurrent().close();
         });
-
-
-
-
-
-
     }
 
     /**
      * sets the data for the line chart based on the selected time option from selectedOptions
-     * @param lineChart: the line chart to plot
+     * @param lineChart: the connector between vaadin and javascript
      * @param selectedOptions: Object holding all the selected options
      */
     private void setDataForLineChart(LineChart lineChart, SelectedOptions selectedOptions) {
         switch (selectedOptions.getTimeSelected()) {
             case "Weekly":
-                lineChart.setData(dbConnector.extractData(lastWeek(), getNow()));
+                lineChart.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Monthly":
-                lineChart.setData(dbConnector.extractData(lastMonth(), getNow()));
+                lineChart.setData(dbConnector.extractData(lastMonth(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Yearly":
-                lineChart.setData(dbConnector.extractData(lastYear(), getNow()));
+                lineChart.setData(dbConnector.extractData(lastYear(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
         }
     }
 
     /**
      * opens the settings window and updates the selectedOptions object according to the selected options
+     * @param lineChart: the connector between vaadin and javascript
      * @param selectedOptions: Object holding all the selected options
      */
-    private void openSettingsWindow(SelectedOptions selectedOptions) {
+    private void openSettingsWindow(LineChart lineChart, SelectedOptions selectedOptions) {
         // Create a sub-window and set the content
         Window subWindow = new Window("Settings");
         HorizontalLayout subContent = new HorizontalLayout();
@@ -128,6 +134,7 @@ public class MainView extends MainDesign implements View {
 
         // Put some components in it
 
+        // TODO: refactor the settings window
         // TODO: replace vertical and horizontal layouts with GridLayout
 
         // first column
@@ -138,11 +145,12 @@ public class MainView extends MainDesign implements View {
         avgStepsColorPicker.setPosition(
                 Page.getCurrent().getBrowserWindowWidth() / 2 - 246/2,
                 15);
+        avgStepsColorPicker.setValue(selectedOptions.getColorForAvgSteps());
         avgStepsColorPicker.addValueChangeListener((HasValue.ValueChangeListener<Color>) valueChangeEvent -> {
-            selectedOptions.setColorForAvgSteps(valueChangeEvent.getValue().getCSS());
+            selectedOptions.setColorForAvgSteps(valueChangeEvent.getValue());
+            avgStepsColorPicker.setValue(valueChangeEvent.getValue());
         });
 
-        avgStepsColorPicker.setValue(Color.RED);
         firstColumn.addComponent(avgStepsColorPicker);
 
         // second column
@@ -152,9 +160,10 @@ public class MainView extends MainDesign implements View {
         userStepsColorPicker.setPosition(
                 Page.getCurrent().getBrowserWindowWidth() / 2 - 246/2,
                 15);
-        userStepsColorPicker.setValue(new Color(70,130,180));
+        userStepsColorPicker.setValue(selectedOptions.getColorForUserSteps());
         userStepsColorPicker.addValueChangeListener((HasValue.ValueChangeListener<Color>) valueChangeEvent -> {
-            selectedOptions.setColorForUserSteps(valueChangeEvent.getValue().getCSS());
+                selectedOptions.setColorForUserSteps(valueChangeEvent.getValue());
+                userStepsColorPicker.setValue(valueChangeEvent.getValue());
         });
         firstColumn.addComponent(userStepsColorPicker);
 
@@ -167,9 +176,8 @@ public class MainView extends MainDesign implements View {
         LocalDate endDate = LocalDate.now();
         startDateField.setValue(endDate.minusMonths(1));
         startDateField.setCaption("Start date");
-        startDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent -> {
-            selectedOptions.setStartDate(String.valueOf(valueChangeEvent.getValue().toEpochDay()*86400000));
-        });
+        startDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent ->
+                selectedOptions.setStartDate(String.valueOf(valueChangeEvent.getValue().toEpochDay()*86400000)));
         thirdColumn.addComponent(startDateField);
 
         DateField endDateField = new DateField();
@@ -203,16 +211,14 @@ public class MainView extends MainDesign implements View {
         VerticalLayout fifthColumn = new VerticalLayout();
         Button confirmSettings = new Button("Ok");
         confirmSettings.addClickListener(event2 -> {
-            // TODO: call redraw event
-            //subWindow.close();
+            setDataForLineChart(lineChart, selectedOptions);
+            subWindow.close();
             System.out.println(selectedOptions.getJSONRepresentation());
         });
         fifthColumn.addComponent(confirmSettings);
 
         Button cancelSettings = new Button("Cancel");
-        cancelSettings.addClickListener(clickEvent -> {
-           subWindow.close();
-        });
+        cancelSettings.addClickListener(clickEvent -> subWindow.close());
         VerticalLayout sixthColumn = new VerticalLayout();
         sixthColumn.addComponent(cancelSettings);
 
@@ -237,18 +243,22 @@ public class MainView extends MainDesign implements View {
         UI.getCurrent().addWindow(subWindow);
     }
 
-    private void updateUserProfile() {
-        //userLabel.setValue("User ID: " + userID);
-        image.setSource(new ExternalResource(DbConnector.extractUserPicture(userID)));
+    /**
+     * updates the user data to display
+     */
+    private void updateUserDataForView() {
+        image.setSource(new ExternalResource(DbConnector.extractUserProfilePictureFromDatabase(userID)));
         nameLabel.setValue(DbConnector.extractUserRealName(userID));
         nameLabel.setStyleName("name-label");
     }
 
-    private void downloadData() {
+    /**
+     * requests the data from google fit and stores it in the database
+     */
+    private void getDataFromGoogleFit() {
         DataRequest dataRequest = new DataRequest();
 
-        // TODO: add parameter for dataRequest.getFitData so that it's called multiple times (12 for a year)
-
+        // get the data for the last 12 months and store them in the database
         for (int month = 0; month < 12; month++) {
             try {
                 dbConnector.storeSteps(dataRequest.getFitData(month));
@@ -259,23 +269,38 @@ public class MainView extends MainDesign implements View {
         }
     }
 
+    /**
+     * returns the current date in milliseconds
+     * @return current date in milliseconds
+     */
     private long getNow () {
-
         return cal.getTimeInMillis();
     }
 
+    /**
+     * returns the date seven days ago in milliseconds
+     * @return date seven days ago in milliseconds
+     */
     private long lastWeek() {
         Calendar lm = (Calendar)cal.clone();
         lm.add(Calendar.DAY_OF_YEAR, -7);
         return lm.getTimeInMillis();
     }
 
+    /**
+     * returns the date a month ago in milliseconds
+     * @return date a month ago in milliseconds
+     */
     private long lastMonth() {
         Calendar lm = (Calendar)cal.clone();
         lm.add(Calendar.MONTH, -1);
         return lm.getTimeInMillis();
     }
 
+    /**
+     * returns the date a year ago in milliseconds
+     * @return date a year ago in milliseconds
+     */
     private long lastYear() {
         Calendar lm = (Calendar)cal.clone();
         lm.add(Calendar.YEAR, -1);
@@ -283,8 +308,10 @@ public class MainView extends MainDesign implements View {
     }
 
     @Override
+    /*
+     * the "implementation" of the abstract enter method
+     */
     public void enter(ViewChangeListener.ViewChangeEvent viewChangeEvent) {
-
     }
 
 }

@@ -14,15 +14,15 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Created by caspar on 21.06.17.
+ * deals with the google fit api request, the OAuth 2.0 and the client secret
  */
-public class ApiRequest {
+class ApiRequest {
 
     /* Redirect URI */
     static final String REDIRECT_URI = "http://localhost:8080";
 
     /* File path to secrets File */
-    static final String USER_SECRETS_FILE = "src/main/resources/client_secret.json";
+    private static final String USER_SECRETS_FILE = "src/main/resources/client_secret.json";
 
     /* OAuth 2 scope. */
     static final List<String> SCOPES = Arrays.asList("https://www.googleapis.com/auth/fitness.activity.read",
@@ -38,7 +38,12 @@ public class ApiRequest {
     /* My Credential for this Session */
     Credential myCredential;
 
-    /* Load Google client secret (for this application) */
+    /**
+     * Load Google client secret (for this application)
+     * @param jsonFactory:
+     * @return GoogleClientSecrets
+     * @throws IOException:
+     */
     static GoogleClientSecrets loadClientSecrets(JsonFactory jsonFactory) throws IOException {
         return  GoogleClientSecrets.load(
                 jsonFactory,

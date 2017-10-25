@@ -11,7 +11,8 @@ import com.vaadin.server.VaadinSession;
 import java.io.IOException;
 
 /**
- * Created by caspar on 05.06.17.
+ * inits the GoogleAuthorizationCodeFlow, creates the credentials, handles the return codes for the VaadinRequests
+ * and stores the current user in the database
  *
  * Requested Scope: https://www.googleapis.com/auth/fitness.activity.read
  */
@@ -47,11 +48,19 @@ public class AuthRequest extends ApiRequest{
         return flow;
     }
 
-
+    /**
+     * @return REDIRECT_URI for the newAuthorizationUrl
+     */
     public String getAuthURI() {
         return flow.newAuthorizationUrl().setRedirectUri(REDIRECT_URI).build();
     }
 
+    /**
+     * creates the credential token
+     * @param code: the return code obtained from the VaadinRequest
+     * @return the GoogleAuthorizationCodeFlow holding the credential
+     * @throws IOException:
+     */
     private Credential createCredential(String code) throws IOException {
         GoogleTokenResponse tokenResponse = flow.newTokenRequest(code).setRedirectUri(REDIRECT_URI).execute();
         System.out.println("Token Response");
@@ -59,7 +68,11 @@ public class AuthRequest extends ApiRequest{
         return flow.createAndStoreCredential(tokenResponse, "id1");
     }
 
-
+    /**
+     * handles the return code from the VaadrinRequest by creating the credentials for the vaadin session and storing
+     * them in the database
+     * @param code: the return code obtained from the VaadinRequest
+     */
     void handleReturnCode(String code){
         System.out.println("Code obtained: ");
         System.out.println(code);
@@ -69,15 +82,15 @@ public class AuthRequest extends ApiRequest{
 
             // STORE CREDENTIAL IN MONGODB
             updateUserData();
-
-
-
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-
+    /**
+     * stores the user data in the database and updates the userID for the vaadin session
+     * @throws IOException:
+     */
     private void updateUserData() throws IOException {
         Oauth2 oauth2 = new Oauth2.Builder(HTTP_TRANSPORT, JSON_FACTORY, myCredential)
                 .setApplicationName("TrackFit").build();
@@ -90,7 +103,5 @@ public class AuthRequest extends ApiRequest{
         dbConnect.storeUser(userInfo.toString());
         // Set Vaadin Session attribute to current user
         VaadinSession.getCurrent().setAttribute("userID", userInfo.getId());
-
     }
-
 }

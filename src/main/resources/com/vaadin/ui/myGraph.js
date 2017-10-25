@@ -8,15 +8,18 @@ var myGraph = myGraph || {};
 myGraph.LineChart = function (element) {
 
     var data;
+    var selectedOptions;
 
     var parseTime = d3.timeParse("%d-%b-%y");
 
     // this function gets called whenever the data for myGraph has been set
-    this.setData = function (dataString) {
+    this.setData = function (dataString, userSelectedOptions) {
     
         // parse the input represented by json 
-        var dat = JSON.parse(dataString)
-        
+        var dat = JSON.parse(dataString);
+        selectedOptions = JSON.parse(userSelectedOptions);
+
+
         // TODO: check if this is really necessary
         dat.forEach(function (d) {
             d.usersteps = +d.steps;
@@ -188,23 +191,29 @@ myGraph.LineChart = function (element) {
 
 
     /**
-     * creates the tooltip text for a certain datapoint
+     * creates the tooltip displaying the date for a certain datapoint
      * @param dat: array of objects holding the data
      * @param l: which data point to create the tooltip for
      * @returns: string representing the tooltip for the data point, e.g. 20/10/2017: \n Average Steps: 8057 \n
                                                                                          Your Steps: 12345
      */
-    function createTooltipTextForDataPoint(dat, l) {
+    function createDateTooltipForDataPoint(dat, l) {
 
         var timeFormat = d3.timeFormat("%Y-%m-%d");
         if (Math.round(dat[l].averagesteps) > Math.round(dat[l].steps)) {
+            return timeFormat(dat[l].startMillis);
+/*
             return timeFormat(dat[l].startMillis) + ":\n "
                                          + "Average Steps: " + Math.round(dat[l].averagesteps) + "\n"
                                          + "Your Steps: " + Math.round(dat[l].steps);
+*/
         } else {
+            return timeFormat(dat[l].startMillis);
+/*
             return timeFormat(dat[l].startMillis) + ":\n "
                                          + "Your Steps: " + Math.round(dat[l].steps) + "\n"
                                          + "Average Steps: " + Math.round(dat[l].averagesteps);
+*/
         }
     }
 
@@ -224,7 +233,7 @@ myGraph.LineChart = function (element) {
         g.append("path")
             .data([dat])
             .attr("d", userStepsLine)
-            .attr("stroke", "steelblue")
+            .attr("stroke", selectedOptions.colorForUserSteps)
             .attr("fill", "none")
             .attr("stroke-width", "3px");
 
@@ -236,21 +245,11 @@ myGraph.LineChart = function (element) {
             .attr("cx", function(d) { return x(d.startMillis); })
             .attr("cy", function(d) { return y(d.steps); })
             .attr("transform", "translate(50,12)")
-            .attr("fill", "steelblue")
+            .attr("fill", selectedOptions.colorForUserSteps)
             .attr("id", function(d,i) { return "user_"+i; })
                  .append("svg:title")
-                      .text(function(d, i) { return createTooltipTextForDataPoint(dat, i)});
+                      .text(function(d, i) { return createDateTooltipForDataPoint(dat, i)});
 
-
-        // add the tooltips to the circles
-/*
-        var timeFormat = d3.timeFormat("%Y-%m-%d");
-        for (var i = 0; i < dat.length; i++) {
-            var title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-            title.textContent = timeFormat(dat[i].startMillis) + ":\n " + dat[i].steps + " steps";
-            document.getElementById("user_"+i).appendChild(title);
-        }
-*/
 
         // Add the average steps
         g.append("path")
@@ -258,13 +257,9 @@ myGraph.LineChart = function (element) {
             .attr("d", avgStepsLine)
             .attr("stroke-width", "3px")
             .attr("fill", "none")
-            .attr("stroke", "red");
+            .attr("stroke", selectedOptions.colorForAvgSteps);
 
         var timeFormat = d3.timeFormat("%Y-%m-%d");
-
-        // TODO: idea: replace return timeFormat(dat[i].startMillis) + ":\n "
-        //                                             + Math.round(dat[i].averagesteps) + " steps"; }
-        // in the dot creation by this function; which returns
 
         // add the circles to select the tooltips
         svg.selectAll("dot")
@@ -274,12 +269,12 @@ myGraph.LineChart = function (element) {
             .attr("cx", function(d) { return x(d.startMillis); })
             .attr("cy", function(d) { return y(d.averagesteps); })
             .attr("transform", "translate(50,12)")
-            .attr("fill", "red")
+            .attr("fill", selectedOptions.colorForAvgSteps)
             .attr("id", function(d,i) { return "avg_"+i; })
                  .append("svg:title")
 /*                      .text(function(d, i) { return timeFormat(dat[i].startMillis) + ":\n "
                       + Math.round(dat[i].averagesteps) + " steps"; });*/
-                      .text(function(d, i) { return createTooltipTextForDataPoint(dat, i)});
+                      .text(function(d, i) { return createDateTooltipForDataPoint(dat, i)});
 
 
         /**
@@ -304,6 +299,8 @@ myGraph.LineChart = function (element) {
                 .attr("dx", coords.cx+30)
                 .attr("text-anchor", "end")
                 .style("fill", "black")
+                .style("font-weight", "bold")
+                .style("font-size", "large")
                 .attr("id", "tooltip1")
                 .text(textToDisplay.selected + "" + Math.round(coords.selectedSteps));
 
@@ -314,6 +311,8 @@ myGraph.LineChart = function (element) {
                 .attr("dx", coords.cx+30)
                 .attr("text-anchor", "end")
                 .style("fill", "black")
+                .style("font-weight", "bold")
+                .style("font-size", "large")
                 .attr("id", "tooltip2")
                 .text(textToDisplay.notSelected + "" + Math.round(coords.notSelectedSteps));
 
@@ -333,7 +332,6 @@ myGraph.LineChart = function (element) {
 
         // deals with asynchronity of javascript
         /**
-         *
          * @param k: event listener are added to the k-th data point
          */
         function addEventListenerToDataPoint(k) {
@@ -418,7 +416,7 @@ myGraph.LineChart = function (element) {
             .attr("y", 70)
             .attr("dx", width+150)
             .attr("text-anchor", "end")
-            .style("fill", "red")
+            .style("fill", selectedOptions.colorForAvgSteps)
             .text("The others");
 
         svg.append('rect')
@@ -426,7 +424,7 @@ myGraph.LineChart = function (element) {
                 .attr('height', 15)
                 .attr("y", 70-7.5)
                 .attr("x", width+60)
-                .style('fill', "red");
+                .style('fill', selectedOptions.colorForAvgSteps);
 
         // add legend for user steps
         svg.append("text")
@@ -434,7 +432,7 @@ myGraph.LineChart = function (element) {
             .attr("y", 50)
             .attr("dx", width+105)
             .attr("text-anchor", "end")
-            .style("fill", "steelblue")
+            .style("fill", selectedOptions.colorForUserSteps)
             .text("You ");
 
         svg.append('rect')
@@ -442,7 +440,7 @@ myGraph.LineChart = function (element) {
                 .attr('height', 15)
                 .attr("y", 50-7.5)
                 .attr("x", width+60)
-                .style('fill', "steelblue");
+                .style('fill', selectedOptions.colorForUserSteps);
     }
 
 };

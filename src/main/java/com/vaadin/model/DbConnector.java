@@ -18,18 +18,20 @@ import static com.mongodb.client.model.Aggregates.*;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Projections.*;
 
-
+/**
+ * Connects the vaadin session and the MongoDB
+ */
 public class DbConnector extends MongoClient {
 
-    MongoDatabase db;                               // the Mongo database
-    static MongoCollection<Document> userColl;      // collection storing the users
-    MongoCollection<Document> stepColl;             // collection storing the steps
-    MongoCollection<Document> daysColl;             // collection storing the days
-    String sessionUserID;                           // the user session id (should be the same as the google account id)
+    private MongoDatabase db;                               // the Mongo database
+    private static MongoCollection<Document> userColl;      // collection storing the users
+    private MongoCollection<Document> stepColl;             // collection storing the steps
+    private MongoCollection<Document> daysColl;             // collection storing the days
+    private String sessionUserID;                           // the user session id (should be the same as the google account id)
 
 
     /**
-     * Accesses DB, creates an Instance if it does not exist yet.c
+     * Accesses DB, creates an Instance if it does not exist yet.
      * @param sessionUserID: the user session id
      */
     public DbConnector(String sessionUserID) {
@@ -45,7 +47,7 @@ public class DbConnector extends MongoClient {
      * profile picture) are getting updated
      * @param googleUserData: the user data provided from google
      */
-    public void storeUser(String googleUserData) {
+    void storeUser(String googleUserData) {
 
         // parse the json formatted string to a mongodb document
         Document userDoc = Document.parse(googleUserData);
@@ -118,45 +120,66 @@ public class DbConnector extends MongoClient {
             // Update Days Collection
             storeDays(startTime, steps);
         });
-
     }
 
-    public void storeDays(Long startTime, int steps) {
+    /**
+     * stores the days (basically date, steps and number of entries) in the database
+     * @param date: the date in milliseconds since 1970
+     * @param steps: the steps on that day
+     */
+    private void storeDays(Long date, int steps) {
 
-        Document newDayDoc = new Document("_id", startTime);
+        Document newDayDoc = new Document("_id", date);
         // In the case, that this is the first entry on this day
         double newAverage = steps;
         int entries = 0;
 
         // Recalculate values when this day is already in the collection
-        if (daysColl.count(eq("_id", startTime)) > 0) {
-            double oldAverage = Double.valueOf(daysColl.find(eq("_id", startTime)).first().get("average").toString());
-            entries = daysColl.find(eq("_id", startTime)).first().getInteger("entries");
+        if (daysColl.count(eq("_id", date)) > 0) {
+            double oldAverage = Double.valueOf(daysColl.find(eq("_id", date)).first().get("average").toString());
+            entries = daysColl.find(eq("_id", date)).first().getInteger("entries");
             newAverage = ((oldAverage * entries) + steps) / (entries + 1);
         }
 
+        // update the number of entries, the average and the date
         newDayDoc.put("entries", entries+1 );
         newDayDoc.put("average", newAverage);
-        newDayDoc.put("date", new Date(startTime));
+        newDayDoc.put("date", new Date(date));
 
-        daysColl.replaceOne(eq("_id", startTime), newDayDoc, new UpdateOptions().upsert(true));
-
+        // update the entry in the day collection (insert if it doesn't exist yet)
+        daysColl.replaceOne(eq("_id", date), newDayDoc, new UpdateOptions().upsert(true));
     }
 
-    public static String extractUserPicture(String userID) {
+    /**
+     * extracts the user profile picture from the database
+     * @param userID: the id of the user to query
+     * @return the link to the user profile picture
+     */
+    public static String extractUserProfilePictureFromDatabase(String userID) {
         return userColl.find(eq("_id", userID)).first().getString("picture");
     }
 
+    /**
+     * extracts the user real name from the database
+     * @param userID: the id of the user to query
+     * @return the name of the user
+     */
     public static String extractUserRealName(String userID) {
         return userColl.find(eq("_id", userID)).first().getString("name");
     }
 
-
+    /**
+     * extracts all the data from the database within the range of startTime and endTime and returns them in json format
+     * @param startTime: the start of the interval (date in milliseconds since 1970)
+     * @param endTime: the end of the interval (date in milliseconds since 1970)
+     * @return json formatted string holding the date (in milliseconds), the steps of the current user and the
+     *          average steps of the other users
+     */
     public String extractData(Long startTime, Long endTime) {
 
         List<Document> docList = new ArrayList<>();
 
-        MongoCursor<Document> iterator = db.getCollection("steps").aggregate(Arrays.asList(
+        for (Document document : db.getCollection("steps").aggregate(Arrays.asList(
                 match(
                         and(
                                 eq("user", sessionUserID),
@@ -177,14 +200,9 @@ public class DbConnector extends MongoClient {
 
                         )
                 )
-        )).iterator();
-
-        while (iterator.hasNext()) {
-            docList.add(iterator.next());
+        ))) {
+            docList.add(document);
         }
-
         return JSON.serialize(docList);
-
     }
-
 }

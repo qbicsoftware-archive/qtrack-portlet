@@ -8,49 +8,16 @@ import com.vaadin.server.VaadinSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
 
 /**
- * Created by caspar on 20.06.17.
+ * Requests the data from google fit
  */
 public class DataRequest extends AuthRequest{
 
     /* Google User ID for the current user*/
     public DataRequest() {
         myCredential = (Credential) VaadinSession.getCurrent().getAttribute("sessionCredential");
-
     }
-
-    // TODO: check if this only works for android
-    public void insertSomeRandomData() {
-
-        // https://code.tutsplus.com/tutorials/google-fit-for-android-history-api--cms-25856
-        Calendar cal = Calendar.getInstance();
-        long now = cal.getTimeInMillis();
-        cal.setTimeInMillis(now - now  % (24 * 60 * 60 * 1000)); // Find the last full day
-        long endTime = cal.getTimeInMillis();
-        cal.add(Calendar.HOUR_OF_DAY, -24);
-        long startTime = cal.getTimeInMillis();
-
-/*        DataSource
-
-        DataSource dataSource = new DataSource.Builder()
-                .setAppPackageName(this)
-                .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
-                .setName("Step Count")
-                .setType(DataSource.TYPE_RAW)
-                .build();
-
-        int stepCountDelta = 1000000;
-        DataSet dataSet = DataSet.create(dataSource);
-
-        DataPoint point = dataSet.createDataPoint()
-                .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);
-        point.getValue(Field.FIELD_STEPS).setInt(stepCountDelta);
-        dataSet.add(point);*/
-
-    }
-
 
     /**
      * returns the google fit data of the last year aggregated by each day
