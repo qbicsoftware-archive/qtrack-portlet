@@ -1,10 +1,10 @@
 /**
  * Connects JavaScript with Vaadin
  */
-window.com_vaadin_ui_LineChart = function() {
+window.com_vaadin_ui_ChartComponent = function() {
 
     // Create the component
-    var lineChart = new myGraph.LineChart(this.getElement());
+    var lineChart = new myGraph.ChartComponent(this.getElement());
 
     // Handle changes from the server-side
     this.onStateChange = function() {

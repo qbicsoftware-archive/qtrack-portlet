@@ -22,8 +22,9 @@ public class MainDesign extends HorizontalLayout {
     protected CssLayout menu;
     protected Button dashboard;
     protected Button reports;
-    protected Button customize;
-    protected Button admin;
+    protected Button steps_linechart;
+    protected Button activity_barchart;
+    protected Button settings;
     protected Button logout;
     protected Label viewTitle;
     protected RadioButtonGroup<String> timeRadioButtonGroup;

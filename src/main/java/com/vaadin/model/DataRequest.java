@@ -8,6 +8,7 @@ import com.vaadin.server.VaadinSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.TimeZone;
 
 /**
  * Requests the data from google fit
@@ -22,29 +23,16 @@ public class DataRequest extends AuthRequest{
     /**
      * returns the google fit data of the last year aggregated by each day
      * @param monthsAgo: integer noting from which month within a year we want to have the data; e.g. 3 if we want to
-     *                 receive the data from the data 3 months ago
-     * @return string with the google fit data
+     *                 receive the data for one month 3 months ago
+     * @return string with the google fit data from the month, which is monthsAgo months ago :)
      */
     public String getFitData(int monthsAgo) throws IOException {
 
         Fitness fit = new Fitness.Builder(HTTP_TRANSPORT, JSON_FACTORY, myCredential)
                 .setApplicationName("TrackFit").build();
 
-        // Setting a start and end date for the request.
-        Calendar cal = Calendar.getInstance();
-        long now = cal.getTimeInMillis();
-        cal.setTimeInMillis(now - now  % (24 * 60 * 60 * 1000)); // Find the last full day
-        cal.add(Calendar.MONTH, -monthsAgo);
-        long endTime = cal.getTimeInMillis();
-        cal.add(Calendar.MONTH, -1);
-        long startTime = cal.getTimeInMillis();
-
-        // create the request
-        AggregateRequest aggRequest = new AggregateRequest();
-
-        // set start- and end time for the request
-        aggRequest.setStartTimeMillis(startTime);
-        aggRequest.setEndTimeMillis(endTime);
+        // create the aggregate request object with the start and end date set
+        AggregateRequest aggRequest = setupTimeForAggregateRequest(monthsAgo);
 
         // we want data to be aggregated by each day
         BucketByTime bucketByTime = new BucketByTime();
@@ -52,10 +40,10 @@ public class DataRequest extends AuthRequest{
         aggRequest.setBucketByTime(bucketByTime);
 
         // specify the data type we want to request (see https://developers.google.com/fit/rest/v1/data-types)
-        AggregateBy aggregateBy1 = new AggregateBy();
-        aggregateBy1.setDataTypeName("com.google.step_count.delta");
+        AggregateBy aggregateByStepsCount = new AggregateBy();
+        aggregateByStepsCount.setDataTypeName("com.google.step_count.delta");
 
-        // TODO: get sleeping data; activities are be stored in ..
+        // TODO: get sleeping data; activities are stored in ..
 /*
         com.google.activity.sample
         com.google.activity.segment
@@ -71,55 +59,81 @@ public class DataRequest extends AuthRequest{
             Awake (during sleep cycle) 	112
         */
 
-
-        // Instantaneous sample of the current activity.
-        //AggregateBy aggregateBy2 = new AggregateBy();
-        //aggregateBy2.setDataTypeName("com.google.activity.sample");       // TODO: doesnt work this way
-
         // Continuous time interval of a single activity.
-        AggregateBy aggregateBy3 = new AggregateBy();
-        aggregateBy3.setDataTypeName("com.google.activity.segment");
-
-        // Total time and number of segments in a particular activity for a time interval.
-        AggregateBy aggregateBy4 = new AggregateBy();
-        aggregateBy4.setDataSourceId("derived:com.google.:com.google.android.gms:aggregated");     // TODO
-        aggregateBy4.setDataTypeName("com.google.activity.summary");        // TODO: doesnt work
-
-/*      error message:
-            com.google.api.client.googleapis.json.GoogleJsonResponseException: 400 Bad Request
-            {
-                "code" : 400,
-                    "errors" : [ {
-                "domain" : "global",
-                        "message" : "no default datasource found for: com.google.activity.summary",
-                        "reason" : "invalidArgument"
-            } ],
-                "message" : "no default datasource found for: com.google.activity.summary"
-            }
-        */
+        AggregateBy aggregateByActivityData = new AggregateBy();
+        aggregateByActivityData.setDataSourceId("derived:com.google.activity.segment:com.google.android.gms:" +
+                "merge_activity_segments");
+        aggregateByActivityData.setDataTypeName("com.google.activity.segment");
 
         // add the aggregateBy to the list
-        ArrayList<AggregateBy> list = new ArrayList<>();
-        list.add(aggregateBy1);
-
-        // TODO: testing
-        //list.add(aggregateBy2);
-        list.add(aggregateBy3);
-        //list.add(aggregateBy4);
+        ArrayList<AggregateBy> listOfAggregatesWithActivity = new ArrayList<>();
+        listOfAggregatesWithActivity.add(aggregateByStepsCount);
+        listOfAggregatesWithActivity.add(aggregateByActivityData);
 
         // set the list of aggregateBys for the request
-        aggRequest.setAggregateBy(list);
+        aggRequest.setAggregateBy(listOfAggregatesWithActivity);
 
-        System.out.println("aggRequest:");
-        System.out.println(aggRequest.toPrettyString());
+        AggregateResponse aggResponse;
 
-        // get the response for the request
-        AggregateResponse aggResponse = fit.users().dataset()
-                .aggregate("me", aggRequest).execute();
+        try {
+            // get the response for the request
+            aggResponse = fit.users().dataset()
+                    .aggregate("me", aggRequest).execute();
 
-        System.out.println("aggResponse");
-        System.out.println(aggResponse.toPrettyString());
+        // there is no activity data
+        } catch (com.google.api.client.googleapis.json.GoogleJsonResponseException e) {
+
+            // create a new list of aggregate bys without the activity aggregateBy
+            ArrayList<AggregateBy> listOfAggregatesWithoutActivity = new ArrayList<>();
+            listOfAggregatesWithoutActivity.add(aggregateByStepsCount);
+            aggRequest.setAggregateBy(listOfAggregatesWithoutActivity);
+
+            // get the response for the new request
+            aggResponse = fit.users().dataset()
+                    .aggregate("me", aggRequest).execute();
+        }
+
+        //System.out.println("aggResponse");
+        //System.out.println(aggResponse.toPrettyString());
 
         return aggResponse.toString();
+    }
+
+    /**
+     * sets the start time millis and the end time millis for the aggregate request according to monthsAgo
+     * @param monthsAgo: integer noting from which month within a year we want to have the data; e.g. 3 if we want to
+     *                 receive the data for one month 3 months ago
+     * @return AggregateRequest with StartTimeMillis and EndTimeMillis set
+     */
+    private AggregateRequest setupTimeForAggregateRequest(int monthsAgo) {
+
+        // get a calendar instance with Coordinated Universal Time
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+
+        // set hours, minutes, seconds and milliseconds
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        // go monthsAgo back
+        cal.add(Calendar.MONTH, -monthsAgo);
+
+        // get the end time of the time interval
+        long endTime = cal.getTimeInMillis();
+
+        // get the month before the end date
+        cal.add(Calendar.MONTH, -1);
+
+        // get the start time of the time interval
+        long startTime = cal.getTimeInMillis();
+
+        // create the request
+        AggregateRequest aggRequest = new AggregateRequest();
+
+        // set start- and end time for the request
+        aggRequest.setStartTimeMillis(startTime);
+        aggRequest.setEndTimeMillis(endTime);
+        return aggRequest;
     }
 }

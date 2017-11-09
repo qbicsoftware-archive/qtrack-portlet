@@ -9,10 +9,11 @@ class SelectedOptions {
 
     private Color colorForAvgSteps;
     private Color colorForUserSteps;
-    private String startDate;
-    private String endDate;
+    private long startDate;
+    private long endDate;
     private String dotTypeSelection;
     private String timeSelected;
+    private String plotSelected;
 
     /**
      * constructor
@@ -23,19 +24,20 @@ class SelectedOptions {
      * @param dotTypeSelection which dot types the user has selected
      * @param timeSelected which time the user has selected
      */
-    SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, String startDate, String endDate,
-                    String dotTypeSelection, String timeSelected) {
+    SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, long startDate, long endDate,
+                    String dotTypeSelection, String timeSelected, String plotSelected) {
         this.colorForAvgSteps = colorForAvgSteps;
         this.colorForUserSteps = colorForUserSteps;
         this.startDate = startDate;
         this.endDate = endDate;
         this.dotTypeSelection = dotTypeSelection;
         this.timeSelected = timeSelected;
+        this.plotSelected = plotSelected;
     }
     
     /**
-     * returns the JSON representation
-     * @return the JSON representation of the object
+     * returns the JSON representation of the object
+     * @return the JSON representation
      */
     String getJSONRepresentation() {
 
@@ -44,7 +46,8 @@ class SelectedOptions {
                 "\"startDate\":\"" + getStartDate() + "\"," +
                 "\"endDate\":\"" + getEndDate() + "\"," +
                 "\"timeSelected\":\"" + getTimeSelected() + "\"," +
-                "\"dotTypeSelection\":\"" + getDotTypeSelection() + "\"" +
+                "\"dotTypeSelection\":\"" + getDotTypeSelection() + "\"," +
+                "\"plotSelected\":\"" + getPlotSelected() + "\"" +
                 "}";
     }
 
@@ -69,19 +72,19 @@ class SelectedOptions {
         this.colorForUserSteps = colorForUserSteps;
     }
 
-    String getStartDate() {
+    long getStartDate() {
         return startDate;
     }
 
-    void setStartDate(String startDate) {
+    void setStartDate(long startDate) {
         this.startDate = startDate;
     }
 
-    String getEndDate() {
+    long getEndDate() {
         return endDate;
     }
 
-    void setEndDate(String endDate) {
+    void setEndDate(long endDate) {
         this.endDate = endDate;
     }
 
@@ -100,4 +103,8 @@ class SelectedOptions {
     void setTimeSelected(String timeSelected) {
         this.timeSelected = timeSelected;
     }
+
+    String getPlotSelected() { return plotSelected; }
+
+    void setPlotSelected(String plotSelected) { this.plotSelected = plotSelected; }
 }

@@ -2,14 +2,14 @@ package com.vaadin.ui;
 
 import com.vaadin.annotations.JavaScript;
 
-// these .js files are associated with the LineChart
-@JavaScript({"d3.v4.min.js", "myGraphConnector.js", "myGraph.js"})
+// these .js files are associated with the ChartComponent
+@JavaScript({"d3.v4.min.js", "myGraphConnector.js", "myGraph.js", "StackedBarChart.js", "LineChart.js"})
 
 /*
  * Represents the charts created in myGraph.js; calling the function setData calls the identically named function within
  * the myGraph.js which results in redrawing of the javascript content
  */
-public class LineChart extends AbstractJavaScriptComponent{
+public class ChartComponent extends AbstractJavaScriptComponent{
 
     public void setData(String data, String selectedOptions) {
 
@@ -22,8 +22,8 @@ public class LineChart extends AbstractJavaScriptComponent{
     }
 
     @Override
-    protected LineChartState getState() {
-        return (LineChartState) super.getState();
+    protected ChartComponentState getState() {
+        return (ChartComponentState) super.getState();
     }
 
 }

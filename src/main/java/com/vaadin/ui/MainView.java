@@ -13,6 +13,8 @@ import com.vaadin.shared.ui.colorpicker.Color;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Calendar;
+import java.util.Date;
+import java.util.Objects;
 
 
 /**
@@ -26,6 +28,7 @@ public class MainView extends MainDesign implements View {
     private String userID;  // the user ID for the database connection
     private DbConnector dbConnector; // the connector between Vaadin and MongoDB
     private Calendar cal;   // the calender
+    private boolean hasUserModifiedDate = false;    // whether the user has modified the date to plot or not
 
     public MainView() {
 
@@ -40,35 +43,44 @@ public class MainView extends MainDesign implements View {
         getDataFromGoogleFit();
         cal = Calendar.getInstance();   // calendar to calculate which dates to use
 
-        // create a new LineChart to display the charts
-        LineChart lineChart = new LineChart();
-        contentArea.addComponent(lineChart);
+        // create a new ChartComponent to display the charts
+        ChartComponent chartComponent = new ChartComponent();
+        contentArea.addComponent(chartComponent);
 
         // set the default item for the radio button group
         timeRadioButtonGroup.setSelectedItem("Monthly");
 
         // default options for the customize tab
         SelectedOptions selectedOptions = new SelectedOptions(Color.RED,
-                new Color(70,130,180), String.valueOf(lastMonth()), String.valueOf(getNow()),
-                "Circles", "Monthly");
+                new Color(70,130,180), lastMonth(), getNow(),
+                "Circles", "Monthly", "LineChart");
 
-        // hand the data and the selected options to the line chart
-        setDataForLineChart(lineChart, selectedOptions);
+        // hand the data (stored in chartComponent) and the selected options to the line chart
+        setDataForLineChart(chartComponent, selectedOptions);
 
         // add all the listener to the view
-        addListenerToView(lineChart, selectedOptions);
+        addListenerToView(chartComponent, selectedOptions);
     }
+
 
     /**
      * adds all the listeners (mostly for the buttons) to the view
-     * @param lineChart: the line chart to set the data for
+     * @param chartComponent: the line chart to set the data for
      * @param selectedOptions: the object holding all the selected options
      */
-    private void addListenerToView(LineChart lineChart, SelectedOptions selectedOptions) {
+    private void addListenerToView(ChartComponent chartComponent, SelectedOptions selectedOptions) {
         // change listener for the radio button group ()
         timeRadioButtonGroup.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
+
+            // check if the user has clicked custom date..
+            if (Objects.equals(valueChangeEvent.getValue(), "Custom Date")) {
+                // open the settings window to let him select a custom date
+                openSettingsWindow(chartComponent, selectedOptions);
+            } else {
+                // set the selected time and the data
                 selectedOptions.setTimeSelected(valueChangeEvent.getValue());
-                setDataForLineChart(lineChart, selectedOptions);
+                setDataForLineChart(chartComponent, selectedOptions);
+            }
         });
 
         // Handle the events with an anonymous class
@@ -84,14 +96,19 @@ public class MainView extends MainDesign implements View {
             Notification.show("Reports clicked!");
         });
 
-        customize.addClickListener(event -> {
+        settings.addClickListener(event -> {
             // open the settings window
-            openSettingsWindow(lineChart, selectedOptions);
+            openSettingsWindow(chartComponent, selectedOptions);
         });
 
-        admin.addClickListener(event -> {
-            //admin.setCaption("admin clicked!");
-            Notification.show("Admin clicked!");
+        steps_linechart.addClickListener(event -> {
+            selectedOptions.setPlotSelected("LineChart");
+            setDataForLineChart(chartComponent, selectedOptions);
+        });
+
+        activity_barchart.addClickListener(event -> {
+            selectedOptions.setPlotSelected("StackedBarChart");
+            setDataForLineChart(chartComponent, selectedOptions);
         });
 
         logout.addClickListener(event -> {
@@ -104,29 +121,37 @@ public class MainView extends MainDesign implements View {
 
     /**
      * sets the data for the line chart based on the selected time option from selectedOptions
-     * @param lineChart: the connector between vaadin and javascript
+     * @param chartComponent: the connector between vaadin and javascript
      * @param selectedOptions: Object holding all the selected options
      */
-    private void setDataForLineChart(LineChart lineChart, SelectedOptions selectedOptions) {
+    private void setDataForLineChart(ChartComponent chartComponent, SelectedOptions selectedOptions) {
+
         switch (selectedOptions.getTimeSelected()) {
             case "Weekly":
-                lineChart.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
+                hasUserModifiedDate = false;
+                chartComponent.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Monthly":
-                lineChart.setData(dbConnector.extractData(lastMonth(), getNow()), selectedOptions.getJSONRepresentation());
+                hasUserModifiedDate = false;
+                chartComponent.setData(dbConnector.extractData(lastMonth(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Yearly":
-                lineChart.setData(dbConnector.extractData(lastYear(), getNow()), selectedOptions.getJSONRepresentation());
+                hasUserModifiedDate = false;
+                chartComponent.setData(dbConnector.extractData(lastYear(), getNow()), selectedOptions.getJSONRepresentation());
+                break;
+            case "Custom Date":
+                chartComponent.setData(dbConnector.extractData(selectedOptions.getStartDate(), selectedOptions.getEndDate()),
+                        selectedOptions.getJSONRepresentation());
                 break;
         }
     }
 
     /**
      * opens the settings window and updates the selectedOptions object according to the selected options
-     * @param lineChart: the connector between vaadin and javascript
+     * @param chartComponent: the connector between vaadin and javascript
      * @param selectedOptions: Object holding all the selected options
      */
-    private void openSettingsWindow(LineChart lineChart, SelectedOptions selectedOptions) {
+    private void openSettingsWindow(ChartComponent chartComponent, SelectedOptions selectedOptions) {
         // Create a sub-window and set the content
         Window subWindow = new Window("Settings");
         HorizontalLayout subContent = new HorizontalLayout();
@@ -161,6 +186,13 @@ public class MainView extends MainDesign implements View {
                 Page.getCurrent().getBrowserWindowWidth() / 2 - 246/2,
                 15);
         userStepsColorPicker.setValue(selectedOptions.getColorForUserSteps());
+
+        // TODO: check if there is a open listener and a close listener for the color picker; if so then
+        // on open:         subWindow.setClosable(false);
+        // on close:         subWindow.setClosable(true);
+        // OR: use a click listener and a boolean which switches its value everytime the colorpicker gets clicked
+
+
         userStepsColorPicker.addValueChangeListener((HasValue.ValueChangeListener<Color>) valueChangeEvent -> {
                 selectedOptions.setColorForUserSteps(valueChangeEvent.getValue());
                 userStepsColorPicker.setValue(valueChangeEvent.getValue());
@@ -174,20 +206,59 @@ public class MainView extends MainDesign implements View {
         // let the user choose the time interval he wants to plot; default: one month
         DateField startDateField = new DateField();
         LocalDate endDate = LocalDate.now();
-        startDateField.setValue(endDate.minusMonths(1));
+        startDateField.setValue(new java.sql.Date(new Date(selectedOptions.getStartDate()).getTime()).toLocalDate());
         startDateField.setCaption("Start date");
-        startDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent ->
-                selectedOptions.setStartDate(String.valueOf(valueChangeEvent.getValue().toEpochDay()*86400000)));
+        startDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent -> {
+
+            System.out.println("start date:");
+            System.out.println(valueChangeEvent.getValue());
+            System.out.println(valueChangeEvent.getValue().toEpochDay());
+            System.out.println(selectedOptions.getEndDate());
+
+            // date selection is fine
+            if (valueChangeEvent.getValue().toEpochDay()*86400000 < selectedOptions.getEndDate()) {
+                selectedOptions.setStartDate(valueChangeEvent.getValue().toEpochDay()*86400000);
+                hasUserModifiedDate = true;
+            // start date is before end date
+            } else {
+                // set the start date back to the old value
+                Date oldDate = new Date(selectedOptions.getStartDate());
+                startDateField.setValue(new java.sql.Date(oldDate.getTime()).toLocalDate());
+                Notification.show("Please select a date before the end date!", Notification.Type.WARNING_MESSAGE);
+            }
+        });
         thirdColumn.addComponent(startDateField);
 
         DateField endDateField = new DateField();
-        endDateField.setValue(LocalDate.now());
+        endDateField.setValue(new java.sql.Date(new Date(selectedOptions.getEndDate()).getTime()).toLocalDate());
         endDateField.setCaption("End date");
         endDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent -> {
-            selectedOptions.setEndDate(String.valueOf(valueChangeEvent.getValue().toEpochDay()*86400000));
 
-            //selectedOptions.setEndDate(valueChangeEvent.getValue().toString());
-            //Notification.show(valueChangeEvent.getValue().toString());
+            // date selection is fine
+            if (valueChangeEvent.getValue().toEpochDay()*86400000 > selectedOptions.getStartDate() &&
+                    valueChangeEvent.getValue().toEpochDay()*86400000 < new Date().getTime()) {
+                selectedOptions.setEndDate(valueChangeEvent.getValue().toEpochDay()*86400000);
+                hasUserModifiedDate = true;
+            // end date is before start date
+            } else {
+                // set the end date back to the old value
+                Date oldDate = new Date(selectedOptions.getEndDate());
+                endDateField.setValue(new java.sql.Date(oldDate.getTime()).toLocalDate());
+
+                // start date is a later date than end date
+                if (valueChangeEvent.getValue().toEpochDay()*86400000 < selectedOptions.getStartDate()) {
+                    Notification.show("Please select a date after the start date!",
+                            Notification.Type.WARNING_MESSAGE);
+                // end date is in the future
+                } else if (valueChangeEvent.getValue().toEpochDay()*86400000 > new Date().getTime()) {
+                    Notification.show("Please select a date in the past!",
+                            Notification.Type.WARNING_MESSAGE);
+                // some other things went wrong
+                } else {
+                    Notification.show("Please select a valid date!",
+                            Notification.Type.WARNING_MESSAGE);
+                }
+            }
         });
         thirdColumn.addComponent(endDateField);
 
@@ -211,14 +282,23 @@ public class MainView extends MainDesign implements View {
         VerticalLayout fifthColumn = new VerticalLayout();
         Button confirmSettings = new Button("Ok");
         confirmSettings.addClickListener(event2 -> {
-            setDataForLineChart(lineChart, selectedOptions);
+
+            if (hasUserModifiedDate) {
+                timeRadioButtonGroup.setSelectedItem("Custom Date");
+                selectedOptions.setTimeSelected("Custom Date");
+            }
+
+            setDataForLineChart(chartComponent, selectedOptions);
             subWindow.close();
             System.out.println(selectedOptions.getJSONRepresentation());
         });
         fifthColumn.addComponent(confirmSettings);
 
         Button cancelSettings = new Button("Cancel");
-        cancelSettings.addClickListener(clickEvent -> subWindow.close());
+        cancelSettings.addClickListener(clickEvent -> {
+            timeRadioButtonGroup.setSelectedItem(selectedOptions.getTimeSelected());
+            subWindow.close();
+        });
         VerticalLayout sixthColumn = new VerticalLayout();
         sixthColumn.addComponent(cancelSettings);
 
@@ -261,7 +341,9 @@ public class MainView extends MainDesign implements View {
         // get the data for the last 12 months and store them in the database
         for (int month = 0; month < 12; month++) {
             try {
-                dbConnector.storeSteps(dataRequest.getFitData(month));
+
+                // TODO:
+                dbConnector.storeData(dataRequest.getFitData(month));
             } catch (IOException e) {
                 e.printStackTrace();
                 System.out.println("Error while downloading Fit Data");
@@ -283,7 +365,7 @@ public class MainView extends MainDesign implements View {
      */
     private long lastWeek() {
         Calendar lm = (Calendar)cal.clone();
-        lm.add(Calendar.DAY_OF_YEAR, -7);
+        lm.add(Calendar.DAY_OF_YEAR, -8);
         return lm.getTimeInMillis();
     }
 
