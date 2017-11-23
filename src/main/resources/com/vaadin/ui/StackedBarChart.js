@@ -1,6 +1,28 @@
 
 // TODO: make a .js file for the helper functions
 
+function computeSum(array) {
+    var count=0;
+    for (var i=array.length; i--;) {
+     count+=array[i];
+    }
+    return count;
+}
+
+function computeMean(array) {
+    return computeSum(array) / array.length;
+}
+
+function computeVariance(array) {
+    var mean = computeMean(array);
+    return computeMean(array.map(function(num) {
+        return Math.pow(num - mean, 2);
+    }));
+}
+
+
+
+
 /*
  * calculates the number of ticks to use for the x axis
  * param n: number of measurements
@@ -101,17 +123,18 @@ function extractActivityNames(data) {
  * @param data: array of objects holding the data to plot
  * @param g : svg component
  */
-function drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, _keys, active_link) {
+function drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, _keys, active_categories) {
 
     var keys;
     console.log(data);
     var allKeys = extractActivityNames(data);
-    var active_link;
+    var active_categories;      // TODO: rename to camel case
+    var active_categories_;     // TODO: rename to camel case
 
     if (_keys === null) {
         // get all activity names from the user, e.g. "walking", "sleeping", "in_vehicle", "still", etc.
         keys = allKeys;
-        active_link = "0";
+        active_categories = "0";
     } else {
         keys = _keys;
         // remove previously drawn elements
@@ -119,10 +142,13 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
 
         // create the svg with the corresponding size
         svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
-                                                                                    height),
+                                                                                    height+margin.top+margin.bottom),
             g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     }
+
+    active_categories_ = keys;  // TODO: check if it makes sense; currently only for testing purposes
+
     console.log("stacked bar chart");
     console.log("keys: " + keys);
     console.log("height: " + height);
@@ -166,13 +192,28 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         d.date = timeFormat(d.startMillis);
     });
 
+    // calculate the standard deviation for all of the activities and store it in an object
+    stdDeviationsForActivities = {};
+    for (var k = 0; k < keys.length; k++) {     // iterate over all activities
+        var activity = keys[k];
+        activityValues = data.map(a => a.activities[activity]);     // get the values for the current activity
+        stdDeviationsForActivities[activity] = Math.sqrt(computeVariance(activityValues));  // compute the std dev
+    }
+
+    // sort the keys in ascending order, so that activities with low std deviation are at the bottom of the chart
+    keysSorted = Object.keys(stdDeviationsForActivities).sort(function(a,b){
+        return stdDeviationsForActivities[a]-stdDeviationsForActivities[b]
+    });
+    keys = keysSorted;
+
+
     // sort the data by total activity time
     //data.sort(function(a, b) { return b.total - a.total; });
 
     // setup the domains for the scales
     x.domain(data.map(function(d) { return d.date; }));
     y.domain([0, d3.max(data, function(d) { return d.total/60000/60; })]).nice();
-    colorScale.domain(keys);
+    colorScale.domain(allKeys);
 
     console.log("y domain" + y.domain());
 
@@ -262,6 +303,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     legendClassArray = legendClassArray.reverse();
 
 
+
     // add the colored rectangles to the legend
     legend.append("rect")
         .attr("x", width + 20)
@@ -271,47 +313,43 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .attr("id", function (d, i) {
             return "id" + d.replace(/\s+/g, '');
         })
+        .style("stroke", "black")
+        .style("stroke-width", 2)
+        .on("mouseover", function(d,i){
+            d3.select(this).style("cursor", "pointer");
+        })
         .on("click",function(d, i){
-            if (active_link === "0") { //nothing selected, turn on this selection
-                d3.select(this)
-                    .style("stroke", "black")
-                    .style("stroke-width", 2);
 
-                active_link = this.id.split("id").pop();
-                //plotSingle(this);
-                drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
-                    new Array(keys.slice().reverse()[i]), active_link);
+            var currentCategory = this.id.split("id").pop();
+            var posInArrayOfCurrentCategory = active_categories_.indexOf(currentCategory);
+
+            // category is in array -> user wants to disable the category -> remove it
+            if (posInArrayOfCurrentCategory > -1) {
+                active_categories_.splice(posInArrayOfCurrentCategory, 1);
+            // category is not in array -> add it
+            } else {
+                active_categories_.push(currentCategory);
+            }
+
+            console.log(active_categories_);
+
+            drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
+                active_categories_, active_categories);
 
 
-                console.log(keys.slice().reverse()[i]);
-
-                //gray out the others
-                for (i = 0; i < legendClassArray.length; i++) {
-                    if (legendClassArray[i] != active_link) {
-                        d3.select("#id" + legendClassArray[i])
-                            .style("opacity", 0.5);
-                    }
-                }
-
-            } else { //deactivate
-                if (active_link === this.id.split("id").pop()) {//active square selected; turn it OFF
-                    d3.select(this)
+            for (i = 0; i < legendClassArray.length; i++) {
+                if (active_categories_.indexOf(legendClassArray[i]) < 0) {
+                    d3.select("#id" + legendClassArray[i])
                         .style("stroke", "none");
-
-                    active_link = "0"; //reset
-
-                    //restore remaining boxes to normal opacity
-                    for (i = 0; i < legendClassArray.length; i++) {
-                        d3.select("#id" + legendClassArray[i])
-                            .style("opacity", 1);
-                    }
-
-                    drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
-                        allKeys, active_link);
-                    //restore plot to original
-                    //restorePlot(d);
+                } else {
+                    d3.select("#id" + legendClassArray[i])
+                                                .style("stroke", "black")
+                                                .style("stroke-width", 2);
                 }
-            } //end active_link check
+            }
+
+
+
         });
 
 
@@ -427,8 +465,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     for (var k = 0; k < data.length; k++) {
         addEventListenerToDataPoint(k);
     }
-
-
 
 }
 

@@ -92,13 +92,13 @@ myGraph.ChartComponent = function (element) {
         // remove previously drawn elements
         d3.select("svg").remove();
 
+        // adjust the height for the range of the y axis
+        adjusted_height = height-margin.top-margin.bottom;
+
         // create the svg with the corresponding size
         svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
                                                                                     height),
             g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-        // adjust the height for the range of the y axis
-        adjusted_height = height-margin.top-margin.bottom;
 
     }
 
