@@ -38,10 +38,10 @@ function getDatesForXAxis(x, width) {
 
     var daysOfMeasurements = [];
 
-    // we have multiple dates as domain
+    // we have multiple dates as domain (= activity data)
     if (x.domain().length > 2) {
         daysOfMeasurements = x.domain();
-    // we have two longs as domain
+    // we have two longs as domain (= steps data)
     } else {
         // get all dates between the first and the last measurement
         var now = new Date(x.domain()[1]);
@@ -68,12 +68,12 @@ function getDatesForXAxis(x, width) {
  * @param day: the object holding all the activities on that day
  * @return {number} the total time of all activities on the specified day
  */
-function calculateTotalTimeForActivities(day) {
+function calculateTotalTimeForActivities(day, keys) {
 
     var totalActivityTime = 0;
     var activities = day.activities;
     for (var activity in activities) {
-        if (activities.hasOwnProperty(activity)) {
+        if (activities.hasOwnProperty(activity) && (keys.indexOf(activity) > -1)) {
             totalActivityTime += activities[activity]
         }
     }
@@ -92,6 +92,7 @@ function extractActivityNames(data) {
         activityNames.push(Object.getOwnPropertyNames(data[i].activities));
     }
     return Array.from(new Set([].concat.apply([], activityNames)));
+    //return Array.from(new Set([].concat.apply([], activityNames))).sort();
 }
 
 
@@ -100,9 +101,31 @@ function extractActivityNames(data) {
  * @param data: array of objects holding the data to plot
  * @param g : svg component
  */
-function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
+function drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, _keys, active_link) {
 
+    var keys;
+    console.log(data);
+    var allKeys = extractActivityNames(data);
+    var active_link;
+
+    if (_keys === null) {
+        // get all activity names from the user, e.g. "walking", "sleeping", "in_vehicle", "still", etc.
+        keys = allKeys;
+        active_link = "0";
+    } else {
+        keys = _keys;
+        // remove previously drawn elements
+        d3.select("svg").remove();
+
+        // create the svg with the corresponding size
+        svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
+                                                                                    height),
+            g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    }
     console.log("stacked bar chart");
+    console.log("keys: " + keys);
+    console.log("height: " + height);
 
     var timeFormat = d3.timeFormat("%Y-%m-%d");
 
@@ -116,17 +139,18 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
         .rangeRound([height, 0]);
 
     // create the color scale
-    // we have at most 9 categories, so this color scale is fine
+    // we have at most 9 categories (+1 color for the mouseover), so this color scale is fine
+    var colorRange =
+        ['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a'];
     var colorScale = d3.scaleOrdinal()
-        .range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf','#999999']);
+        //.range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf','#999999']);
+        .range(colorRange);
 
-    // get all activity names from the user, e.g. "walking", "sleeping", "in_vehicle", "still", etc.
-    var keys = extractActivityNames(data);
 
     // prepare the data ..
     data.forEach(function (d) {
         // .. by calculating the total activity time for each day
-        d.total = calculateTotalTimeForActivities(d);
+        d.total = calculateTotalTimeForActivities(d, keys);
         // .. by creating new properties holding the individual activity time in hours
         for (var i = 0; i < keys.length; i++) {
             var activityName = keys[i];
@@ -150,6 +174,8 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
     y.domain([0, d3.max(data, function(d) { return d.total/60000/60; })]).nice();
     colorScale.domain(keys);
 
+    console.log("y domain" + y.domain());
+
     if (x.bandwidth() < 3) {
         x.paddingInner = 0;
     }
@@ -167,22 +193,36 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
         .attr("y", function(d) { return y(d[1]); })
         .attr("height", function(d) { return y(d[0]) - y(d[1]); })
         .attr("width", x.bandwidth())
-/*        .append("svg:title")
-        .text(function(d, i) { return timeFormat(d.data.startMillis)})*/
-        .on("mouseover", function() { tooltip.style("display", null); })
+        .attr("id", function(d,i) { return i; })
+        .append("svg:title")
+        .text(function(d, i) { return timeFormat(d.data.startMillis)});
+
+        /*.on("mouseover", function(d,i) {
+            d3.select(this).attr("fill", function() { return colorRange[colorRange.length-1]});  // TODO: last element form color range
+            })
+        .on("mouseout", function(d, i) { d3.select(this).attr("fill", function() {
+            console.log(d);
+            return "";
+            });});*/
+        /*.on("mouseover", function() { tooltip.style("display", null); })
         .on("mouseout", function() { tooltip.style("display", "none"); })
-        .on("mousemove", function(d) {
+        .on("mousemove", function(d,i) {
             var xPosition = d3.mouse(this)[0] - 5;
             var yPosition = d3.mouse(this)[1] - 5;
             tooltip.attr("transform", "translate(" + xPosition + "," + yPosition + ")");
             tooltip.select("text").text(Math.round((d[1]-d[0])*100)/100);
-        });
+            //console.log("i: " + i);
+            //console.log("d: " + d);
+        });*/
 
     // TODO: tooltips similar to LineChart tooltips
 
+    console.log("x axis:");
+    console.log(getDatesForXAxis(x, width));
 
     // draw the x axis
     g.append("g")
+        .attr("class", "axis")
         .attr("transform", "translate(0," + height + ")")
         .call(d3.axisBottom(x)
             .tickValues(getDatesForXAxis(x, width))
@@ -191,7 +231,7 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
     // draw the y axis
     g.append("g")
         .attr("class", "axis")
-        .call(d3.axisLeft(y).ticks(null, "s"))
+        .call(d3.axisLeft(y).ticks(null, "r"))
         .append("text")
         .attr("x", 2)
         .attr("y", y(y.ticks().pop()) + 0.5)
@@ -201,22 +241,80 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
         .attr("text-anchor", "start")
         .text("Hours");
 
+    var legendClassArray = [];  // TODO: added
+
     // create the legend
     var legend = g.append("g")
         .attr("font-family", "sans-serif")
         .attr("font-size", 10)
         .attr("text-anchor", "end")
         .selectAll("g")
-        .data(keys.slice().reverse())
+        .data(allKeys.slice().reverse())
         .enter().append("g")
-        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; })
+        .attr("class", function (d) {       // TODO: ADDED
+            legendClassArray.push(d.replace(/\s+/g, '')); //remove spaces
+            return "legend";
+        });
+
+
+    //reverse order to match order in which bars are stacked    // TODO: added
+    legendClassArray = legendClassArray.reverse();
+
 
     // add the colored rectangles to the legend
     legend.append("rect")
         .attr("x", width + 20)
         .attr("width", 19)
         .attr("height", 19)
-        .attr("fill", colorScale);
+        .attr("fill", colorScale)
+        .attr("id", function (d, i) {
+            return "id" + d.replace(/\s+/g, '');
+        })
+        .on("click",function(d, i){
+            if (active_link === "0") { //nothing selected, turn on this selection
+                d3.select(this)
+                    .style("stroke", "black")
+                    .style("stroke-width", 2);
+
+                active_link = this.id.split("id").pop();
+                //plotSingle(this);
+                drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
+                    new Array(keys.slice().reverse()[i]), active_link);
+
+
+                console.log(keys.slice().reverse()[i]);
+
+                //gray out the others
+                for (i = 0; i < legendClassArray.length; i++) {
+                    if (legendClassArray[i] != active_link) {
+                        d3.select("#id" + legendClassArray[i])
+                            .style("opacity", 0.5);
+                    }
+                }
+
+            } else { //deactivate
+                if (active_link === this.id.split("id").pop()) {//active square selected; turn it OFF
+                    d3.select(this)
+                        .style("stroke", "none");
+
+                    active_link = "0"; //reset
+
+                    //restore remaining boxes to normal opacity
+                    for (i = 0; i < legendClassArray.length; i++) {
+                        d3.select("#id" + legendClassArray[i])
+                            .style("opacity", 1);
+                    }
+
+                    drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
+                        allKeys, active_link);
+                    //restore plot to original
+                    //restorePlot(d);
+                }
+            } //end active_link check
+        });
+
+
 
     // add the text to the legend
     legend.append("text")
@@ -244,6 +342,91 @@ function drawStackedBarChart(data, selectedOptions, svg, g, width, height) {
         .style("text-anchor", "middle")
         .attr("font-size", "12px")
         .attr("font-weight", "bold");
+
+
+    /**
+     * creates the tooltip text elements which are displayed when the user is hovering over the dots
+     * @param coords: object holding the x and y coords for the text element e.g. {"cx": 10, "cy": 50}
+     * @param isHoveringOverUserDataPoint: boolean whether the user is hovering over a data point referring
+     * to the user or referring to the average
+     */
+    function createTooltipTextElements(coords) {
+
+        var textToDisplay = {"selected": "", "notSelected": ""};
+        if (isHoveringOverUserDataPoint) {
+            textToDisplay.selected = "Your Steps: ";
+            textToDisplay.notSelected = "Average Steps: ";
+        } else {
+            textToDisplay.selected = "Average Steps: ";
+            textToDisplay.notSelected = "Your Steps: ";
+        }
+
+        // add the text for the currently selected dot
+        svg.append("text")
+            .attr("dy", ".35em")
+            .attr("y", coords.cy+10)
+            .attr("dx", coords.cx+30)
+            .attr("text-anchor", "end")
+            .style("fill", "black")
+            .style("font-weight", "bold")
+            .style("font-size", "large")
+            .attr("id", "tooltip1")
+            .text(textToDisplay.selected + "" + Math.round(coords.selectedSteps));
+
+        // add the text for the other data point at the same time
+        svg.append("text")
+            .attr("dy", ".35em")
+            .attr("y", coords.cy_other+10)
+            .attr("dx", coords.cx+30)
+            .attr("text-anchor", "end")
+            .style("fill", "black")
+            .style("font-weight", "bold")
+            .style("font-size", "large")
+            .attr("id", "tooltip2")
+            .text(textToDisplay.notSelected + "" + Math.round(coords.notSelectedSteps));
+    }
+
+
+    /**
+     * removes the element with the elementId from DOM
+     * @param: elementId: the Id of the element to remove
+     */
+    function removeElementFromDOM(elementId) {
+
+        var tooltipElem = document.getElementById(elementId);
+        if (tooltipElem !== null) {
+            tooltipElem.parentElement.removeChild(tooltipElem);
+        }
+    }
+
+    // deals with asynchronity of javascript
+    /**
+     * @param k: event listener are added to the k-th data point
+     */
+    function addEventListenerToDataPoint(k) {
+
+        var event = document.createEvent('Event');
+        event.initEvent('mouseover', true, true);
+
+        document.getElementById(k).addEventListener("mouseover", function() {
+/*            createTooltipTextElements({"cx": x(dat[k].startMillis), "cy": y(dat[k].averagesteps),
+                "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averagesteps,
+                "notSelectedSteps": dat[k].steps}, isUserSelected);*/
+            console.log(data[k]);
+        });
+
+        // when user stops hovering over a dot ..
+        document.getElementById(k).addEventListener("mouseout", function() {
+            // .. delete the tooltip
+            removeElementFromDOM("tooltip1");
+            removeElementFromDOM("tooltip2");
+        });
+    }
+
+    // add the event listeners for the tooltips to the data points
+    for (var k = 0; k < data.length; k++) {
+        addEventListenerToDataPoint(k);
+    }
 
 
 

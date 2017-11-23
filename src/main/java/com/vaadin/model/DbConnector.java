@@ -9,7 +9,6 @@ import com.mongodb.util.JSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 import static com.mongodb.client.model.Aggregates.*;
@@ -90,50 +89,45 @@ public class DbConnector extends MongoClient {
         Document stepDoc = Document.parse(stepData);
 
         // Split Document into Array
-        ArrayList<Document> stepList = (ArrayList<Document>)stepDoc.get("bucket");
+        ArrayList<Document> dayList = (ArrayList<Document>)stepDoc.get("bucket");
 
 
-        stepList.forEach(document -> {
+        // grab the step and activity data for each day
+        dayList.forEach(document -> {
 
-            //System.out.println("\n document");
-            //System.out.println(document);
+            // get the date
+            long dateInMillis = Long.valueOf(document.get("startTimeMillis").toString());
 
-            long startTime = Long.valueOf(document.get("startTimeMillis").toString());
-            int steps = 0;
+            // variables for holding the step data and the activity data
+            int steps = -1;
             Map<String, Integer> activities = new HashMap<>();
 
             // Assign steps to currently logged in User
             document.append("user", sessionUserID);
 
-            // Ugly loop through nested arrays to get the Step value. Maybe there is a better way.
-            ArrayList<Document> datasetList  =  (ArrayList<Document>) document.get("dataset");
-
-            //System.out.println("\n datasetList");
-            //System.out.println(datasetList);
+            // get the data set from the document and store it in a array list of documents
+            ArrayList<Document> dataSetList  =  (ArrayList<Document>) document.get("dataset");
 
             // TODO: from here to ...
 
-            // iterate over each document representing one day
-            for (Document documentInDatasets : datasetList) {       // TODO: check if actually one day
+            // iterate over each document representing either step or activity data from google
+            for (Document documentInDatasets : dataSetList) {
 
-                ArrayList<Document> documentInDataset = (ArrayList<Document>) documentInDatasets.get("point");
+                // get the actual data from the document
+                ArrayList<Document> dataInDataSet = (ArrayList<Document>) documentInDatasets.get("point");
 
                 // check if we have any data at all
-                if (documentInDataset.size() > 0 ) {
+                if (dataInDataSet.size() > 0 ) {
 
-                    System.out.println("\n\nNEW DAY!!! (maybe)");   // TODO: check if its actually a new day
-                    System.out.println(new Date(startTime));
-                    System.out.println(new Date(Long.valueOf(document.get("startTimeMillis").toString())));
-                    System.out.println(documentInDatasets);
-
-                    // iterate over the documents holding the step and the activity data
-                    for (Document dataInDocument : documentInDataset) {
+                    // iterate over the data entries (for step data we always have one; for activity data we have
+                    // one for each activity type (walking, sleeping, still, etc.))
+                    for (Document dataEntry : dataInDataSet) {
 
                         // we have step data
-                        if (dataInDocument.get("dataTypeName").equals("com.google.step_count.delta")) {
+                        if (dataEntry.get("dataTypeName").equals("com.google.step_count.delta")) {
 
                             // we only have one step entry, so simply setting the variable steps is fine..
-                            ArrayList<Document> valueList = (ArrayList<Document>)(dataInDocument.get("value"));
+                            ArrayList<Document> valueList = (ArrayList<Document>)(dataEntry.get("value"));
                             steps =  valueList.get(0).getInteger("intVal");
 
                         // we have activity data
@@ -141,46 +135,56 @@ public class DbConnector extends MongoClient {
 
                             // get the activities for the activity entry
                             // we have three documents per value List
-                            ArrayList<Document> valueList = (ArrayList<Document>)(dataInDocument.get("value"));
-                            String activity = activityTypesValuesMapper.get(valueList.get(0).getInteger("intVal"));
-                            int duration = valueList.get(1).getInteger("intVal");
-                            String activityType = activityTypesValuesMapper.get(valueList.get(2).getInteger("intVal"));
-                            System.out.println(activity);
-                            System.out.printf("session duration %d \n", duration/60000);
+                            ArrayList<Document> valueList = (ArrayList<Document>)(dataEntry.get("value"));
 
-                            // put the activities into the activities object
-                            // we already have a activity entry for the current activity..
-                            if (activities.get(activityTypesValuesMapper.get(activity)) != null) {
-                                int activityDuration = activities.get(activity);
-                                activities.put(activity, activityDuration+duration);    // update the old entry
-                            // we don't have a activity entry for the current activity
-                            } else {
-                                activities.put(activity, duration);
+                            // check if the activity is in the activityTypesValueMapper
+                            if (activityTypesValuesMapper.get(valueList.get(0).getInteger("intVal")) != null) {
+
+                                String activity = activityTypesValuesMapper.get(valueList.get(0).getInteger("intVal"));
+                                int duration = valueList.get(1).getInteger("intVal");
+/*                                String activityType =
+                                        activityTypesValuesMapper.get(valueList.get(2).getInteger("intVal"));*/
+
+                                // put the activities into the activities object
+                                // we already have a activity entry for the current activity..
+                                if (activities.get(activityTypesValuesMapper.get(activity)) != null) {
+                                    int activityDuration = activities.get(activity);
+                                    activities.put(activity, activityDuration + duration);    // update the old entry
+                                    // we don't have a activity entry for the current activity
+                                } else {
+                                    activities.put(activity, duration);
+                                }
                             }
                         }
                     }
-                } else {
-
-                    // create some random steps data
-                    steps = createRandomData(250, 5000);
-
-                    // create some random activity data
-                    int nanoSecondsToHours = 1000*60*60;        // activity duration is stored in nano seconds
-
-                    // 6-8h of sleeping
-                    activities.put("sleeping", createRandomData(nanoSecondsToHours*6, nanoSecondsToHours*8));
-                    // 10mins to 2 hours of walking
-                    activities.put("walking", createRandomData(nanoSecondsToHours/6, nanoSecondsToHours*2));
-                    // 2-8h of still activity
-                    activities.put("still", createRandomData(nanoSecondsToHours*2, nanoSecondsToHours*8));
-                    // 10mins to 2 hours of vehicle
-                    activities.put("in_vehicle", createRandomData(nanoSecondsToHours/6, nanoSecondsToHours*2));
                 }
+            }
+
+            // we don't have any steps data ..
+            if (steps < 0) {
+                // .. so we need to create some random data
+                steps = createRandomData(250, 5000);
+            }
+            // we don't have any activity data ..
+            if (activities.size() < 1) {
+
+                // .. so we need to create some random activity data
+                int nanoSecondsToHours = 1000 * 60 * 60;        // activity duration is stored in nano seconds
+
+                // 6-8h of sleeping
+                activities.put("sleeping", createRandomData(nanoSecondsToHours * 6, nanoSecondsToHours * 8));
+                // 10mins to 2 hours of walking
+                activities.put("walking", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
+                // 2-8h of still activity
+                activities.put("still", createRandomData(nanoSecondsToHours * 2, nanoSecondsToHours * 8));
+                // 10mins to 2 hours of vehicle
+                activities.put("in_vehicle", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
+
             }
 
             // Convert timeInMillis to long
             document.put("steps", steps);
-            document.put("startMillis", startTime);
+            document.put("startMillis", dateInMillis);
             document.put("endMillis", Long.valueOf(document.get("endTimeMillis").toString()));
 
             // remove unnecessary fields in the document
@@ -189,20 +193,20 @@ public class DbConnector extends MongoClient {
             document.remove("endTimeMillis");
 
             // store steps in the database with the user id as identifier
-            Bson stepFilter = and(eq("user", sessionUserID), eq("startMillis", startTime));
+            Bson stepFilter = and(eq("user", sessionUserID), eq("startMillis", dateInMillis));
             stepColl.replaceOne(stepFilter, document, new UpdateOptions().upsert(true));
 
             // create the document for the activities
             Document activityDoc = new Document("user", sessionUserID);
             activityDoc.put("activities", activities);
-            activityDoc.put("timeMillis", startTime);
+            activityDoc.put("timeMillis", dateInMillis);
 
             // store activities in the database with the user id as identifier
-            Bson activityFilter = and(eq("user", sessionUserID), eq("timeMillis", startTime));
+            Bson activityFilter = and(eq("user", sessionUserID), eq("timeMillis", dateInMillis));
             activityColl.replaceOne(activityFilter, activityDoc, new UpdateOptions().upsert(true));
 
             // Update Days Collection
-            storeDays(startTime, steps, activities);
+            storeDay(dateInMillis, steps, activities);
         });
     }
 
@@ -223,7 +227,7 @@ public class DbConnector extends MongoClient {
      * @param steps : the steps on that day
      * @param activities: the activities on that day
      */
-    private void storeDays(Long date, int steps, Map<String, Integer> activities) {
+    private void storeDay(Long date, int steps, Map<String, Integer> activities) {
 
         Document newDayDoc = new Document("_id", date);
         // In the case, that this is the first entry on this day
@@ -235,10 +239,6 @@ public class DbConnector extends MongoClient {
             double oldAverage = Double.valueOf(daysColl.find(eq("_id", date)).first().get("average").toString());
             entries = daysColl.find(eq("_id", date)).first().getInteger("entries");
             newAverage = ((oldAverage * entries) + steps) / (entries + 1);
-
-            // TODO: recalculate average, if day is already in collection
-            // TODO: function, if avg duration for each activity
-
         }
 
         // update the number of entries, the average and the date
@@ -246,18 +246,8 @@ public class DbConnector extends MongoClient {
         newDayDoc.put("average", newAverage);
         newDayDoc.put("timeMillis", date);
 
-        // TODO: calculate average per activity OR only for sleep => entries field for each activity or only for sleep
-
-
-        // TODO: insert average duration for the activities OR the avg sleep duration
-
-
         // update the entry in the day collection (insert if it doesn't exist yet)
         daysColl.replaceOne(eq("_id", date), newDayDoc, new UpdateOptions().upsert(true));
-
-
-        // TODO: insert document into database
-
     }
 
     /**

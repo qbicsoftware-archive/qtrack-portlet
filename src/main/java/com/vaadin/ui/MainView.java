@@ -73,7 +73,7 @@ public class MainView extends MainDesign implements View {
         timeRadioButtonGroup.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
 
             // check if the user has clicked custom date..
-            if (Objects.equals(valueChangeEvent.getValue(), "Custom Date")) {
+            if (Objects.equals(valueChangeEvent.getValue(), "Custom Date") && !hasUserModifiedDate) {
                 // open the settings window to let him select a custom date
                 openSettingsWindow(chartComponent, selectedOptions);
             } else {
@@ -129,15 +129,23 @@ public class MainView extends MainDesign implements View {
         switch (selectedOptions.getTimeSelected()) {
             case "Weekly":
                 hasUserModifiedDate = false;
+
+                selectedOptions.setStartDate(lastWeek()+86400000);
+                selectedOptions.setEndDate(getNow()-86400000);
                 chartComponent.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Monthly":
                 hasUserModifiedDate = false;
+                selectedOptions.setStartDate(lastMonth());
+                selectedOptions.setEndDate(getNow()-86400000);
                 chartComponent.setData(dbConnector.extractData(lastMonth(), getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Yearly":
                 hasUserModifiedDate = false;
-                chartComponent.setData(dbConnector.extractData(lastYear(), getNow()), selectedOptions.getJSONRepresentation());
+                selectedOptions.setStartDate(lastYear());
+                selectedOptions.setEndDate(getNow()-86400000);
+                chartComponent.setData(dbConnector.extractData(lastYear()-86400000,
+                        getNow()), selectedOptions.getJSONRepresentation());
                 break;
             case "Custom Date":
                 chartComponent.setData(dbConnector.extractData(selectedOptions.getStartDate(), selectedOptions.getEndDate()),
@@ -164,7 +172,6 @@ public class MainView extends MainDesign implements View {
 
         // first column
         VerticalLayout firstColumn = new VerticalLayout();
-        firstColumn.addComponent(new Label("Color selection:"));
         ColorPicker avgStepsColorPicker = new ColorPicker("Average Steps");
         avgStepsColorPicker.setCaption("Average Steps");
         avgStepsColorPicker.setPosition(
@@ -176,7 +183,6 @@ public class MainView extends MainDesign implements View {
             avgStepsColorPicker.setValue(valueChangeEvent.getValue());
         });
 
-        firstColumn.addComponent(avgStepsColorPicker);
 
         // second column
         VerticalLayout secondColumn = new VerticalLayout();
@@ -197,7 +203,14 @@ public class MainView extends MainDesign implements View {
                 selectedOptions.setColorForUserSteps(valueChangeEvent.getValue());
                 userStepsColorPicker.setValue(valueChangeEvent.getValue());
         });
-        firstColumn.addComponent(userStepsColorPicker);
+
+        if (selectedOptions.getPlotSelected().equals("LineChart")) {
+            firstColumn.addComponent(new Label("Color selection:"));
+            firstColumn.addComponent(avgStepsColorPicker);
+            firstColumn.addComponent(userStepsColorPicker);
+        }
+
+
 
         // third column:
         VerticalLayout thirdColumn = new VerticalLayout();
@@ -265,7 +278,7 @@ public class MainView extends MainDesign implements View {
 
         // fourth column:
         VerticalLayout fourthColumn = new VerticalLayout();
-        fourthColumn.addComponent(new Label("Dot type selection:"));
+        //fourthColumn.addComponent(new Label("Dot type selection:"));
 
         // select the dot type
         RadioButtonGroup<String> dotTypeRadioButton =
@@ -277,7 +290,7 @@ public class MainView extends MainDesign implements View {
             selectedOptions.setDotTypeSelection(valueChangeEvent.getValue());
             Notification.show(valueChangeEvent.getValue());
         });
-        fourthColumn.addComponent(dotTypeRadioButton);
+        //fourthColumn.addComponent(dotTypeRadioButton);    TODO
 
         VerticalLayout fifthColumn = new VerticalLayout();
         Button confirmSettings = new Button("Ok");

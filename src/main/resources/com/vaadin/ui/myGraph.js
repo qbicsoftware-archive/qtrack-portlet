@@ -53,7 +53,7 @@ myGraph.ChartComponent = function (element) {
                 drawLineChart(data, selectedOptions, svg, g, width, adjusted_height);
                 break;
             case "StackedBarChart":
-                drawStackedBarChart(data, selectedOptions, svg, g, width, adjusted_height);
+                drawStackedBarChart(data, selectedOptions, element, svg, g, width, adjusted_height, margin, null, "0");
                 break;
         }
     }

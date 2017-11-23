@@ -100,7 +100,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("stroke-width", "3px");
 
 
-    var timeFormat = d3.timeFormat("%Y-%m-%d");
+    var timeFormat = d3.timeFormat("%d-%m-%Y");
 
     // add the circles to select the tooltips
     svg.selectAll("dot")
@@ -243,7 +243,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
     }
 
 
-
     // Add the X Axis
     g.append("g")
         .attr("transform", "translate(0," + height + ")")
@@ -254,7 +253,16 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
 
     // Add the Y Axis
     g.append("g")
-        .call(d3.axisLeft(y));
+        .attr("class", "axis")
+        .call(d3.axisLeft(y).ticks(null, "r"))
+        .append("text")
+        .attr("x", 2)
+        .attr("y", y(y.ticks().pop()) + 0.5)
+        .attr("dy", "0.32em")
+        .attr("fill", "#000")
+        .attr("font-weight", "bold")
+        .attr("text-anchor", "start")
+        .text("Steps");
 
 
     // create the color scale
