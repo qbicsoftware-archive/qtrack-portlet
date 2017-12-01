@@ -31,7 +31,7 @@ function calculateNumberOfTicks(n, width) {
 
     // calculate the number of ticks we can display
     var tickLength = 65;
-    var tickPadding = 10;
+    var tickPadding = 20;
     var numberOfTicks = Math.floor(width/(tickLength+tickPadding));
 
     // deal with a width too small or too large
@@ -123,37 +123,65 @@ function extractActivityNames(data) {
  * @param data: array of objects holding the data to plot
  * @param g : svg component
  */
-function drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, _keys, active_categories) {
+function drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, _keys) {
+
+    // TODO: rename _keys to selected_categories or sth like that
+    // TODO: active_categories_ and keys is probably redundant -> remove one of them
+    // TODO:
 
     var keys;
     console.log(data);
     var allKeys = extractActivityNames(data);
-    var active_categories;      // TODO: rename to camel case
     var active_categories_;     // TODO: rename to camel case
 
-    if (_keys === null) {
+
+    if (_keys === null || _keys.length === 0) {
         // get all activity names from the user, e.g. "walking", "sleeping", "in_vehicle", "still", etc.
         keys = allKeys;
-        active_categories = "0";
     } else {
         keys = _keys;
-        // remove previously drawn elements
-        d3.select("svg").remove();
-
-        // create the svg with the corresponding size
-        svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
-                                                                                    height+margin.top+margin.bottom),
-            g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
     }
 
     active_categories_ = keys;  // TODO: check if it makes sense; currently only for testing purposes
+
+    console.log("");
+    console.log("here we go");
+
+    console.log(keys);
+    console.log(allKeys);
+
+    // check if there is at least one category to display
+    var hasCategoryBeenFound = false;
+    for (var i = 0; i < active_categories_.length; i++) {
+        console.log(active_categories_[i]);
+        console.log(allKeys.indexOf(active_categories_[i]) > -1);
+        if (allKeys.indexOf(active_categories_[i]) > -1) {
+            hasCategoryBeenFound = true;
+        }
+    }
+
+    console.log("has category been found: " + hasCategoryBeenFound);
+
+    // if no category to display has been found, display all categories
+    if (!hasCategoryBeenFound) {
+        keys = allKeys;
+        active_categories_ = keys;  // TODO: check if it makes sense; currently only for testing purposes
+    }
+
+    // remove previously drawn elements
+    d3.select("svg").remove();
+
+    // create the svg with the corresponding size
+    svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
+                                                                                height+margin.top+margin.bottom),
+        g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
 
     console.log("stacked bar chart");
     console.log("keys: " + keys);
     console.log("height: " + height);
 
-    var timeFormat = d3.timeFormat("%Y-%m-%d");
+    var timeFormat = d3.timeFormat("%d-%m-%Y");
 
     // create the x and y scales
     var x = d3.scaleBand()
@@ -282,7 +310,8 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .attr("text-anchor", "start")
         .text("Hours");
 
-    var legendClassArray = [];  // TODO: added
+    // the array which holds all the categories for the legend
+    var legendCategoryArray = [];
 
     // create the legend
     var legend = g.append("g")
@@ -293,16 +322,15 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .data(allKeys.slice().reverse())
         .enter().append("g")
         .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; })
-        .attr("class", function (d) {       // TODO: ADDED
-            legendClassArray.push(d.replace(/\s+/g, '')); //remove spaces
+        .attr("class", function (d) {
+            // remove the spaces from the category and add it to the array 
+            legendCategoryArray.push(d.replace(/\s+/g, '')); 
             return "legend";
         });
 
 
-    //reverse order to match order in which bars are stacked    // TODO: added
-    legendClassArray = legendClassArray.reverse();
-
-
+    //reverse order to match order in which bars are stacked
+    legendCategoryArray = legendCategoryArray.reverse();
 
     // add the colored rectangles to the legend
     legend.append("rect")
@@ -313,19 +341,27 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .attr("id", function (d, i) {
             return "id" + d.replace(/\s+/g, '');
         })
-        .style("stroke", "black")
-        .style("stroke-width", 2)
         .on("mouseover", function(d,i){
             d3.select(this).style("cursor", "pointer");
         })
         .on("click",function(d, i){
 
             var currentCategory = this.id.split("id").pop();
-            var posInArrayOfCurrentCategory = active_categories_.indexOf(currentCategory);
+            var posOfCurrentCategoryInArray = active_categories_.indexOf(currentCategory);
 
             // category is in array -> user wants to disable the category -> remove it
-            if (posInArrayOfCurrentCategory > -1) {
-                active_categories_.splice(posInArrayOfCurrentCategory, 1);
+            if (posOfCurrentCategoryInArray > -1) {
+
+                // if there is at least one active category
+                if (active_categories_.length > 0) {
+                    // disable the clicked category
+                    active_categories_.splice(posOfCurrentCategoryInArray, 1);
+                } else {
+                    // redraw the chart with all categories set to selected
+                    drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
+                        allKeys);
+                }
+
             // category is not in array -> add it
             } else {
                 active_categories_.push(currentCategory);
@@ -333,26 +369,24 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
 
             console.log(active_categories_);
 
+            // redraw the chart with the selected categories
             drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin,
-                active_categories_, active_categories);
-
-
-            for (i = 0; i < legendClassArray.length; i++) {
-                if (active_categories_.indexOf(legendClassArray[i]) < 0) {
-                    d3.select("#id" + legendClassArray[i])
-                        .style("stroke", "none");
-                } else {
-                    d3.select("#id" + legendClassArray[i])
-                                                .style("stroke", "black")
-                                                .style("stroke-width", 2);
-                }
-            }
-
-
+                active_categories_);
 
         });
 
-
+    // mark the active categories as selected in the legend by setting a border for the respective rectangle
+    for (i = 0; i < legendCategoryArray.length; i++) {
+        if (keys.indexOf(legendCategoryArray[i]) < 0) {  // category
+        //if (active_categories_.indexOf(legendCategoryArray[i]) < 0) {  // category
+            d3.select("#id" + legendCategoryArray[i])
+                .style("stroke", "none");
+        } else {
+            d3.select("#id" + legendCategoryArray[i])
+                                        .style("stroke", "black")
+                                        .style("stroke-width", 2);
+        }
+    }
 
     // add the text to the legend
     legend.append("text")
@@ -465,6 +499,9 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     for (var k = 0; k < data.length; k++) {
         addEventListenerToDataPoint(k);
     }
+
+    // return the categories selected by the user
+    return active_categories_;
 
 }
 

@@ -10,7 +10,7 @@ function calculateNumberOfTicks(n, width) {
 
     // calculate the number of ticks we can display
     var tickLength = 65;
-    var tickPadding = 10;
+    var tickPadding = 20;
     var numberOfTicks = Math.floor(width/(tickLength+tickPadding));
 
     // deal with a width too small or too large
@@ -247,7 +247,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
     g.append("g")
         .attr("transform", "translate(0," + height + ")")
         .call(d3.axisBottom(x)
-            .tickFormat(d3.timeFormat("%Y-%m-%d"))
+            .tickFormat(timeFormat)
             .tickValues(getDatesForXAxis(x, width))
         );
 

@@ -23,6 +23,7 @@ class SelectedOptions {
      * @param endDate which end date the user has selected
      * @param dotTypeSelection which dot types the user has selected
      * @param timeSelected which time the user has selected
+     * @param plotSelected whether the bar chart or the line chart is selected
      */
     SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, long startDate, long endDate,
                     String dotTypeSelection, String timeSelected, String plotSelected) {

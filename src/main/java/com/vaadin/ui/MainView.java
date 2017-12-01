@@ -5,11 +5,14 @@ import com.vaadin.model.DataRequest;
 import com.vaadin.model.DbConnector;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener;
-import com.vaadin.server.ExternalResource;
-import com.vaadin.server.Page;
-import com.vaadin.server.VaadinSession;
+import com.vaadin.server.*;
 import com.vaadin.shared.ui.colorpicker.Color;
+import elemental.json.JsonArray;
+import elemental.json.JsonObject;
+import org.json.CDL;
+import org.json.JSONArray;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Calendar;
@@ -111,6 +114,30 @@ public class MainView extends MainDesign implements View {
             setDataForLineChart(chartComponent, selectedOptions);
         });
 
+        // add a file downloader to the download_data button
+        StreamResource resource = new StreamResource((StreamResource.StreamSource) () -> {
+            try {
+                // get the user data
+                String userData = chartComponent.getData();
+
+                // convert it to json
+                JSONArray userDataAsJson = new JSONArray(userData);
+
+                // convert it to csv
+                String userDataAsCSV = CDL.toString(userDataAsJson);
+
+                // TODO: flatten the activities into different fields: activities/still, activities/walking, etc.
+
+                return new ByteArrayInputStream(userDataAsCSV.getBytes());
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }, "yourData.csv");
+        new FileDownloader(resource).extend(download_data);
+
+
         logout.addClickListener(event -> {
             // get back to login page
             Page.getCurrent().setLocation( "/" );
@@ -129,7 +156,6 @@ public class MainView extends MainDesign implements View {
         switch (selectedOptions.getTimeSelected()) {
             case "Weekly":
                 hasUserModifiedDate = false;
-
                 selectedOptions.setStartDate(lastWeek()+86400000);
                 selectedOptions.setEndDate(getNow()-86400000);
                 chartComponent.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
@@ -354,8 +380,6 @@ public class MainView extends MainDesign implements View {
         // get the data for the last 12 months and store them in the database
         for (int month = 0; month < 12; month++) {
             try {
-
-                // TODO:
                 dbConnector.storeData(dataRequest.getFitData(month));
             } catch (IOException e) {
                 e.printStackTrace();

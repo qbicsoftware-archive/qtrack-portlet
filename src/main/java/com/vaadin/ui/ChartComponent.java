@@ -11,7 +11,7 @@ import com.vaadin.annotations.JavaScript;
  */
 public class ChartComponent extends AbstractJavaScriptComponent{
 
-    public void setData(String data, String selectedOptions) {
+    void setData(String data, String selectedOptions) {
 
         getState().data = data;
         getState().selectedOptions = selectedOptions;

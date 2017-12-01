@@ -9,6 +9,7 @@ myGraph.ChartComponent = function (element) {
 
     var data;
     var selectedOptions;
+    var selectedCategoriesForBarChart = null;   // stores the categories selected from the user for the bar chart
 
     // TODO: create an object holding all the window variables in myGraph.js and hand it over as parameter
 
@@ -27,7 +28,7 @@ myGraph.ChartComponent = function (element) {
         // TODO: check if this is really necessary
         dat.forEach(function (d) {
             d.usersteps = +d.steps;
-            d.averagesteps = +d.average[0];
+            d.averagesteps = +d.average;
             d.millisstart = +d.startMillis;
         });
 
@@ -53,7 +54,9 @@ myGraph.ChartComponent = function (element) {
                 drawLineChart(data, selectedOptions, svg, g, width, adjusted_height);
                 break;
             case "StackedBarChart":
-                drawStackedBarChart(data, selectedOptions, element, svg, g, width, adjusted_height, margin, null, "0");
+                selectedCategoriesForBarChart =
+                    drawStackedBarChart(data, selectedOptions, element, svg, g, width, adjusted_height, margin,
+                        selectedCategoriesForBarChart);
                 break;
         }
     }

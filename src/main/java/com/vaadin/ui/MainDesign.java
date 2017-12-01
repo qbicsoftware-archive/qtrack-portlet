@@ -24,6 +24,7 @@ public class MainDesign extends HorizontalLayout {
     protected Button reports;
     protected Button steps_linechart;
     protected Button activity_barchart;
+    protected Button download_data;
     protected Button settings;
     protected Button logout;
     protected Label viewTitle;

@@ -9,6 +9,7 @@ import com.mongodb.util.JSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
+import java.lang.reflect.Array;
 import java.util.*;
 
 import static com.mongodb.client.model.Aggregates.*;
@@ -345,6 +346,12 @@ public class DbConnector extends MongoClient {
             } else {
                 docList.add(document);
             }
+
+            // for some reason the average steps are projected onto a array containing a single double value,
+            // so we simply extract the value and put it back into the document
+            ArrayList average = (ArrayList) document.get("average");
+            document.put("average", average.get(0));
+
         }
         return JSON.serialize(docList);
     }
