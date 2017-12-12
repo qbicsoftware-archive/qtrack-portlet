@@ -7,13 +7,13 @@ import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener;
 import com.vaadin.server.*;
 import com.vaadin.shared.ui.colorpicker.Color;
-import elemental.json.JsonArray;
-import elemental.json.JsonObject;
 import org.json.CDL;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Calendar;
 import java.util.Date;
@@ -56,13 +56,58 @@ public class MainView extends MainDesign implements View {
         // default options for the customize tab
         SelectedOptions selectedOptions = new SelectedOptions(Color.RED,
                 new Color(70,130,180), lastMonth(), getNow(),
-                "Circles", "Monthly", "LineChart");
+                "Circles", "Monthly", "LineChart", "Date");
 
         // hand the data (stored in chartComponent) and the selected options to the line chart
         setDataForLineChart(chartComponent, selectedOptions);
 
         // add all the listener to the view
         addListenerToView(chartComponent, selectedOptions);
+    }
+
+    /**
+     * prepares the user data by converting the unix time to a date and flattening the activities array
+     * @param userDataAsJsonArray: user data stored in a json array:
+     *                           [{"startDateInUTC":1510185600000,"average":2597.659574468085,"activities":
+     *                           {"still":23249677,"walking":2153308,"in_vehicle":1745901,"sleeping":23000271},
+     *                           "steps":489}, ...]
+     * @return JSONArray [{"date":09-11-2017,"average steps":2597.659574468085,"still[ms]":23249677,
+     * "walking[ms]":2153308,"in_vehicle[ms]":1745901,"sleeping[ms]":23000271,"steps":489}, ...]
+     */
+    private JSONArray prepareUserData(JSONArray userDataAsJsonArray) {
+
+        // iterate over the json array
+        for (int i=0; i < userDataAsJsonArray.length(); i++){
+
+            // get the current json object
+            JSONObject currentJsonObject = userDataAsJsonArray.getJSONObject(i);
+
+            // change the name of the average steps column
+            float averageSteps = currentJsonObject.getFloat("average");
+            currentJsonObject.put("average steps", averageSteps);
+            currentJsonObject.remove("average");
+
+            // convert the date from unix time to a european data format (1510185600000 -> 09-11-2017) and put it back
+            // to the json object
+            Date date = new Date(currentJsonObject.getLong("startDateInUTC"));
+            SimpleDateFormat sm = new SimpleDateFormat("dd-MM-yyyy");
+            String strDate = sm.format(date);
+            currentJsonObject.remove("startMillis");
+            currentJsonObject.put("date", strDate);
+
+            // flatten the activities array: "activities": {"still":23249677,"walking":2153308,"in_vehicle":1745901,
+            // "sleeping":23000271} changes to "still":23249677, "walking":2153308,"in_vehicle":1745901,"
+            // sleeping":23000271
+            JSONObject activities = currentJsonObject.getJSONObject("activities");
+            for(int j = 0; j < activities.names().length(); j++){
+                String activityName = activities.names().getString(j);
+                long activityDuration = activities.getLong(activityName);
+                currentJsonObject.put(activityName + "[ms]", activityDuration);
+            }
+            currentJsonObject.remove("activities");
+            userDataAsJsonArray.put(i, currentJsonObject);
+        }
+        return userDataAsJsonArray;
     }
 
 
@@ -106,11 +151,13 @@ public class MainView extends MainDesign implements View {
 
         steps_linechart.addClickListener(event -> {
             selectedOptions.setPlotSelected("LineChart");
+            viewTitle.setValue("Steps data");
             setDataForLineChart(chartComponent, selectedOptions);
         });
 
         activity_barchart.addClickListener(event -> {
             selectedOptions.setPlotSelected("StackedBarChart");
+            viewTitle.setValue("Activity data");
             setDataForLineChart(chartComponent, selectedOptions);
         });
 
@@ -121,12 +168,14 @@ public class MainView extends MainDesign implements View {
                 String userData = chartComponent.getData();
 
                 // convert it to json
-                JSONArray userDataAsJson = new JSONArray(userData);
+                JSONArray userDataAsJsonArray = new JSONArray(userData);
+
+                // prepare the data by converting the date from unix time to the local date any by flattening the
+                // activities array
+                userDataAsJsonArray = prepareUserData(userDataAsJsonArray);
 
                 // convert it to csv
-                String userDataAsCSV = CDL.toString(userDataAsJson);
-
-                // TODO: flatten the activities into different fields: activities/still, activities/walking, etc.
+                String userDataAsCSV = CDL.toString(userDataAsJsonArray);
 
                 return new ByteArrayInputStream(userDataAsCSV.getBytes());
 
@@ -134,9 +183,8 @@ public class MainView extends MainDesign implements View {
                 e.printStackTrace();
                 return null;
             }
-        }, "yourData.csv");
+        }, "Data.csv");
         new FileDownloader(resource).extend(download_data);
-
 
         logout.addClickListener(event -> {
             // get back to login page
@@ -158,24 +206,26 @@ public class MainView extends MainDesign implements View {
                 hasUserModifiedDate = false;
                 selectedOptions.setStartDate(lastWeek()+86400000);
                 selectedOptions.setEndDate(getNow()-86400000);
-                chartComponent.setData(dbConnector.extractData(lastWeek(), getNow()), selectedOptions.getJSONRepresentation());
+                chartComponent.setData(dbConnector.extractData(lastWeek(), getNow()),
+                        selectedOptions.getJSONRepresentation());
                 break;
             case "Monthly":
                 hasUserModifiedDate = false;
                 selectedOptions.setStartDate(lastMonth());
                 selectedOptions.setEndDate(getNow()-86400000);
-                chartComponent.setData(dbConnector.extractData(lastMonth(), getNow()), selectedOptions.getJSONRepresentation());
+                chartComponent.setData(dbConnector.extractData(lastMonth(), getNow()),
+                        selectedOptions.getJSONRepresentation());
                 break;
             case "Yearly":
                 hasUserModifiedDate = false;
                 selectedOptions.setStartDate(lastYear());
                 selectedOptions.setEndDate(getNow()-86400000);
-                chartComponent.setData(dbConnector.extractData(lastYear()-86400000,
-                        getNow()), selectedOptions.getJSONRepresentation());
+                chartComponent.setData(dbConnector.extractData(lastYear()-86400000, getNow()),
+                        selectedOptions.getJSONRepresentation());
                 break;
             case "Custom Date":
-                chartComponent.setData(dbConnector.extractData(selectedOptions.getStartDate(), selectedOptions.getEndDate()),
-                        selectedOptions.getJSONRepresentation());
+                chartComponent.setData(dbConnector.extractData(selectedOptions.getStartDate(),
+                        selectedOptions.getEndDate()), selectedOptions.getJSONRepresentation());
                 break;
         }
     }
@@ -236,15 +286,12 @@ public class MainView extends MainDesign implements View {
             firstColumn.addComponent(userStepsColorPicker);
         }
 
-
-
         // third column:
         VerticalLayout thirdColumn = new VerticalLayout();
         thirdColumn.addComponent(new Label("Time interval selection:"));
 
         // let the user choose the time interval he wants to plot; default: one month
         DateField startDateField = new DateField();
-        LocalDate endDate = LocalDate.now();
         startDateField.setValue(new java.sql.Date(new Date(selectedOptions.getStartDate()).getTime()).toLocalDate());
         startDateField.setCaption("Start date");
         startDateField.addValueChangeListener((HasValue.ValueChangeListener<LocalDate>) valueChangeEvent -> {

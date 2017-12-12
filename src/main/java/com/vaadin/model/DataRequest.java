@@ -43,22 +43,6 @@ public class DataRequest extends AuthRequest{
         AggregateBy aggregateByStepsCount = new AggregateBy();
         aggregateByStepsCount.setDataTypeName("com.google.step_count.delta");
 
-        // TODO: get sleeping data; activities are stored in ..
-/*
-        com.google.activity.sample
-        com.google.activity.segment
-        com.google.activity.summary
-*/
-        // see https://developers.google.com/fit/rest/v1/data-types#public_data_types
-        // and https://developers.google.com/fit/rest/v1/reference/activity-types
-        // activity     activity id
-        /*  Sleeping 	                 72
-            Light sleep 	            109
-            Deep sleep 	                110
-            REM sleep 	                111
-            Awake (during sleep cycle) 	112
-        */
-
         // Continuous time interval of a single activity.
         AggregateBy aggregateByActivityData = new AggregateBy();
         aggregateByActivityData.setDataSourceId("derived:com.google.activity.segment:com.google.android.gms:" +

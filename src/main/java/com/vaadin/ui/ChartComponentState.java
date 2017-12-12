@@ -8,5 +8,4 @@ import com.vaadin.shared.ui.JavaScriptComponentState;
 public class ChartComponentState extends JavaScriptComponentState {
     public String data;
     public String selectedOptions;
-
 }

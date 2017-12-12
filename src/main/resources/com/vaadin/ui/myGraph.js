@@ -29,12 +29,12 @@ myGraph.ChartComponent = function (element) {
         dat.forEach(function (d) {
             d.usersteps = +d.steps;
             d.averagesteps = +d.average;
-            d.millisstart = +d.startMillis;
+            // d.millisstart = +d.startDateInUTC;
         });
 
         // sort the data by time
         data = dat.sort(function(a,b){
-            return a.millisstart-b.millisstart;
+            return a.startDateInUTC-b.startDateInUTC;
         });
 
         console.log(data);

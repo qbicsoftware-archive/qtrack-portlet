@@ -37,7 +37,7 @@
         Activity Barchart 
       </vaadin-button>
       <vaadin-button icon="fonticon://Vaadin-Icons/e699" style-name="borderless" width-full plain-text _id="download_data">
-        Download your data 
+        Download Data 
       </vaadin-button>
       <vaadin-button icon="fonticon://Vaadin-Icons/e7d3" style-name="borderless" width-full plain-text _id="settings">
         Settings 
@@ -49,11 +49,11 @@
     </vaadin-css-layout>
    </vaadin-css-layout>
    <vaadin-vertical-layout style-name="content-container" spacing="false" size-full margin="false" :expand>
-    <vaadin-horizontal-layout width-full>
-     <vaadin-label style-name="view-title" width-full plain-text _id="viewTitle">
+    <vaadin-horizontal-layout height="64px" :middle>
+     <vaadin-label style-name="view-title" plain-text _id="viewTitle">
        Overview 
      </vaadin-label>
-     <vaadin-radio-button-group style-name="horizontal" data-item-type="java.lang.String" _id="timeRadioButtonGroup" :middle>
+     <vaadin-radio-button-group style-name="horizontal" responsive data-item-type="java.lang.String" _id="timeRadioButtonGroup" :middle>
       <option item="Weekly">Weekly</option>
       <option item="Monthly">Monthly</option>
       <option item="Yearly">Yearly</option>

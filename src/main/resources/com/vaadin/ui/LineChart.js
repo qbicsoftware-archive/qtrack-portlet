@@ -1,61 +1,4 @@
 
-// TODO: make a .js file for the helper functions
-
-
-/*
- * calculates the number of ticks to use for the x axis
- * param n: number of measurements
- */
-function calculateNumberOfTicks(n, width) {
-
-    // calculate the number of ticks we can display
-    var tickLength = 65;
-    var tickPadding = 20;
-    var numberOfTicks = Math.floor(width/(tickLength+tickPadding));
-
-    // deal with a width too small or too large
-    if (numberOfTicks < 1) {
-        numberOfTicks = 1;
-    } else if (numberOfTicks > n) {
-        numberOfTicks = n;
-    }
-
-    console.log("there are" + numberOfTicks + " ticks fitting in a width of " + width)
-    console.log("every " + Math.floor(n/numberOfTicks) + "days")
-
-    return Math.floor(n/numberOfTicks);
-}
-
-
-/*
- * this function returns the dates for the x axis labels (every x-th date, where x depends on the width of the
- * window)
- */
-function getDatesForXAxis(x, width) {
-
-    var daysOfMeasurements = [];
-
-    // we have multiple dates as domain
-    if (x.domain().length > 2) {
-        daysOfMeasurements = x.domain();
-    // we have two longs as domain
-    } else {
-        // get all dates between the first and the last measurement
-        var now = new Date(x.domain()[1]);
-        for (var d = new Date(x.domain()[0]); d <= now; d.setDate(d.getDate() + 1)) {
-            daysOfMeasurements.push(new Date(d));
-        }
-    }
-
-    // we are only interested in each xth day
-    var everyXthDay = [];
-    var delta = calculateNumberOfTicks(daysOfMeasurements.length, width);   // calculate how many x labels we can display
-    for (i = 0; i < daysOfMeasurements.length; i=i+delta) {
-        everyXthDay.push(daysOfMeasurements[i]);
-    }
-
-    return everyXthDay;
-}
 
 
 /**
@@ -74,22 +17,21 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
     var x = d3.scaleLinear().range([10, width]);
     var y = d3.scaleLinear().range([height, 0]);
 
-
     console.log(dat);
+
     // Scale the range of the data
-    x.domain(d3.extent(dat, function(d) { return d.millisstart; }));
+    x.domain(d3.extent(dat, function(d) { return d.startDateInUTC; }));
     y.domain([0, d3.max(dat, function(d) {return Math.max(d.usersteps, d.averagesteps); })]);
 
     // define the 1st line
     var userStepsLine = d3.line()
-        .x(function(d) { return x(d.millisstart); })
+        .x(function(d) { return x(d.startDateInUTC); })
         .y(function(d) { return y(d.usersteps); });
 
     // define the 2nd line
     var avgStepsLine = d3.line()
-        .x(function(d) { return x(d.millisstart); })
+        .x(function(d) { return x(d.startDateInUTC); })
         .y(function(d) { return y(d.averagesteps); });
-
 
     // Add the user steps
     g.append("path")
@@ -99,7 +41,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("fill", "none")
         .attr("stroke-width", "3px");
 
-
+    // time format for the dates
     var timeFormat = d3.timeFormat("%d-%m-%Y");
 
     // add the circles to select the tooltips
@@ -107,14 +49,13 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .data(dat)
         .enter().append("circle")
         .attr("r", 5)
-        .attr("cx", function(d) { return x(d.startMillis); })
+        .attr("cx", function(d) { return x(d.startDateInUTC); })
         .attr("cy", function(d) { return y(d.steps); })
         .attr("transform", "translate(50,12)")
         .attr("fill", selectedOptions.colorForUserSteps)
         .attr("id", function(d,i) { return "user_"+i; })
         .append("svg:title")
-        .text(function(d, i) { return timeFormat(d.startMillis)});
-
+        .text(function(d, i) { return timeFormat(d.startDateInUTC)});
 
     // Add the average steps
     g.append("path")
@@ -124,19 +65,19 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("fill", "none")
         .attr("stroke", selectedOptions.colorForAvgSteps);
 
-
     // add the circles to select the tooltips
     svg.selectAll("dot")
         .data(dat)
         .enter().append("circle")
         .attr("r", 5)
-        .attr("cx", function(d) { return x(d.startMillis); })
+        .attr("cx", function(d) { return x(d.startDateInUTC); })
         .attr("cy", function(d) { return y(d.averagesteps); })
         .attr("transform", "translate(50,12)")
         .attr("fill", selectedOptions.colorForAvgSteps)
         .attr("id", function(d,i) { return "avg_"+i; })
         .append("svg:title")
-        .text(function(d, i) { return timeFormat(d.startMillis)});
+        .text(function(d, i) { return timeFormat(d.startDateInUTC)});
+
 
     /**
      * creates the tooltip text elements which are displayed when the user is hovering over the dots
@@ -181,20 +122,8 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
     }
 
     /**
-     * removes the element with the elementId from DOM
-     * @param: elementId: the Id of the element to remove
-     */
-    function removeElementFromDOM(elementId) {
-
-        var tooltipElem = document.getElementById(elementId);
-        if (tooltipElem !== null) {
-            tooltipElem.parentElement.removeChild(tooltipElem);
-        }
-    }
-
-    // deals with asynchronity of javascript
-    /**
-     * @param k: event listener are added to the k-th data point
+     * adds event listener to the k-th data point
+     * @param k: index of the data point to add the event listener to
      */
     function addEventListenerToDataPoint(k) {
 
@@ -203,20 +132,20 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
 
         document.getElementById("avg_"+k).addEventListener("mouseover", function() {
             console.log("mouse over avg" + k);
-            console.log(x(dat[k].startMillis));
+            console.log(x(dat[k].startDateInUTC));
             console.log(y(dat[k].averagesteps));
             var isUserSelected = false;
-            createTooltipTextElements({"cx": x(dat[k].startMillis), "cy": y(dat[k].averagesteps),
+            createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].averagesteps),
                 "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averagesteps,
                 "notSelectedSteps": dat[k].steps}, isUserSelected);
         });
 
         document.getElementById("user_"+k).addEventListener("mouseover", function() {
             console.log("mouse over user" + k);
-            console.log(x(dat[k].startMillis));
+            console.log(x(dat[k].startDateInUTC));
             console.log(y(dat[k].steps));
             var isUserSelected = true;
-            createTooltipTextElements({"cx": x(dat[k].startMillis), "cy": y(dat[k].steps),
+            createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].steps),
                 "cy_other": y(dat[k].averagesteps), "selectedSteps": dat[k].steps,
                 "notSelectedSteps": dat[k].averagesteps}, isUserSelected);
         });
@@ -234,13 +163,14 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
             removeElementFromDOM("tooltip1");
             removeElementFromDOM("tooltip2");
         });
-
     }
+
 
     // add the event listeners for the tooltips to the data points
     for (var k = 0; k < dat.length; k++) {
-        addEventListenerToDataPoint(k);
+        addEventListenerToDataPoint(k, x, y);
     }
+
 
 
     // Add the X Axis
@@ -263,7 +193,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("font-weight", "bold")
         .attr("text-anchor", "start")
         .text("Steps");
-
 
     // create the color scale
     var colorScale = d3.scaleOrdinal()
@@ -294,6 +223,3 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .text(function(d) { return d; });
 
 }
-
-
-

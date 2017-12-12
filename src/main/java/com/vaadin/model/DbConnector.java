@@ -9,7 +9,6 @@ import com.mongodb.util.JSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 import static com.mongodb.client.model.Aggregates.*;
@@ -26,25 +25,27 @@ public class DbConnector extends MongoClient {
     private MongoCollection<Document> stepColl;             // collection storing the steps
     private MongoCollection<Document> daysColl;             // collection storing the days
     private MongoCollection<Document> activityColl;         // collection storing the activities and their duration
-    private String sessionUserID;                           // the user session id (should be the same as the google account id)
-    private Map<Integer, String> activityTypesValuesMapper  // maps the integer to the corresponding activity
-            = new HashMap<Integer, String>()
-    {{                                                      // TODO: other activities
-        put(0, "in_vehicle");
-        put(1, "on_bicycle");
-        put(2, "on_foot");
-        put(8, "running");
-        put(3, "still");
-        //put(5, "tilting");
-        //put(4, "unknown");
-        put(7, "walking");
-        put(72, "sleeping");
-/*        put(109, "light_sleep");
-        put(110, "deep_sleep");
-        put(111, "REM_sleep");
-        put(112, "awake_during_sleep_cycle");*/
-    }};
-
+    private String sessionUserID;                           // the user session id (should be the same as the google
+                                                            // account id)
+    // see https://developers.google.com/fit/rest/v1/reference/activity-types for a list of activity types
+    // maps the integer to the corresponding activity
+    private Map<Integer, String> activityTypesValuesMapper = new HashMap<Integer, String>() {
+        {
+            put(0, "in_vehicle");
+            put(1, "on_bicycle");
+            put(2, "on_foot");
+            put(8, "running");
+            put(3, "still");
+            //put(5, "tilting");
+            //put(4, "unknown");
+            put(7, "walking");
+            put(72, "sleeping");
+    /*        put(109, "light_sleep");
+            put(110, "deep_sleep");
+            put(111, "REM_sleep");
+            put(112, "awake_during_sleep_cycle");*/
+        }
+    };
 
     /**
      * Accesses DB, creates an Instance if it does not exist yet.
@@ -79,7 +80,6 @@ public class DbConnector extends MongoClient {
         userColl.replaceOne(eq("_id", user_id), userDoc, new UpdateOptions().upsert(true));
     }
 
-
     /**
      * This function stores the steps in the database. They are assigned to the user with the session id.
      * @param stepData: string representing the steps
@@ -90,14 +90,14 @@ public class DbConnector extends MongoClient {
         Document stepDoc = Document.parse(stepData);
 
         // Split Document into Array
+        @SuppressWarnings("unchecked")
         ArrayList<Document> dayList = (ArrayList<Document>)stepDoc.get("bucket");
-
 
         // grab the step and activity data for each day
         dayList.forEach(document -> {
 
             // get the date
-            long dateInMillis = Long.valueOf(document.get("startTimeMillis").toString());
+            long dateInUTC = Long.valueOf(document.get("startTimeMillis").toString());
 
             // variables for holding the step data and the activity data
             int steps = -1;
@@ -107,14 +107,14 @@ public class DbConnector extends MongoClient {
             document.append("user", sessionUserID);
 
             // get the data set from the document and store it in a array list of documents
+            @SuppressWarnings("unchecked")
             ArrayList<Document> dataSetList  =  (ArrayList<Document>) document.get("dataset");
-
-            // TODO: from here to ...
 
             // iterate over each document representing either step or activity data from google
             for (Document documentInDatasets : dataSetList) {
 
                 // get the actual data from the document
+                @SuppressWarnings("unchecked")
                 ArrayList<Document> dataInDataSet = (ArrayList<Document>) documentInDatasets.get("point");
 
                 // check if we have any data at all
@@ -128,6 +128,7 @@ public class DbConnector extends MongoClient {
                         if (dataEntry.get("dataTypeName").equals("com.google.step_count.delta")) {
 
                             // we only have one step entry, so simply setting the variable steps is fine..
+                            @SuppressWarnings("unchecked")
                             ArrayList<Document> valueList = (ArrayList<Document>)(dataEntry.get("value"));
                             steps =  valueList.get(0).getInteger("intVal");
 
@@ -136,6 +137,7 @@ public class DbConnector extends MongoClient {
 
                             // get the activities for the activity entry
                             // we have three documents per value List
+                            @SuppressWarnings("unchecked")
                             ArrayList<Document> valueList = (ArrayList<Document>)(dataEntry.get("value"));
 
                             // check if the activity is in the activityTypesValueMapper
@@ -143,8 +145,6 @@ public class DbConnector extends MongoClient {
 
                                 String activity = activityTypesValuesMapper.get(valueList.get(0).getInteger("intVal"));
                                 int duration = valueList.get(1).getInteger("intVal");
-/*                                String activityType =
-                                        activityTypesValuesMapper.get(valueList.get(2).getInteger("intVal"));*/
 
                                 // put the activities into the activities object
                                 // we already have a activity entry for the current activity..
@@ -180,13 +180,12 @@ public class DbConnector extends MongoClient {
                 activities.put("still", createRandomData(nanoSecondsToHours * 2, nanoSecondsToHours * 8));
                 // 10mins to 2 hours of vehicle
                 activities.put("in_vehicle", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
-
             }
 
             // Convert timeInMillis to long
             document.put("steps", steps);
-            document.put("startMillis", dateInMillis);
-            document.put("endMillis", Long.valueOf(document.get("endTimeMillis").toString()));
+            document.put("startDateInUTC", dateInUTC);
+            document.put("endDateInUTC", Long.valueOf(document.get("endTimeMillis").toString()));
 
             // remove unnecessary fields in the document
             document.remove("dataset");
@@ -194,20 +193,22 @@ public class DbConnector extends MongoClient {
             document.remove("endTimeMillis");
 
             // store steps in the database with the user id as identifier
-            Bson stepFilter = and(eq("user", sessionUserID), eq("startMillis", dateInMillis));
+            Bson stepFilter = and(eq("user", sessionUserID), eq("startDateInUTC", dateInUTC));
             stepColl.replaceOne(stepFilter, document, new UpdateOptions().upsert(true));
 
             // create the document for the activities
             Document activityDoc = new Document("user", sessionUserID);
             activityDoc.put("activities", activities);
-            activityDoc.put("timeMillis", dateInMillis);
+            //activityDoc.put("timeMillis", dateInMillis);
+            activityDoc.put("dateInUTC", dateInUTC);
 
             // store activities in the database with the user id as identifier
-            Bson activityFilter = and(eq("user", sessionUserID), eq("timeMillis", dateInMillis));
+            //Bson activityFilter = and(eq("user", sessionUserID), eq("timeMillis", dateInUTC));
+            Bson activityFilter = and(eq("user", sessionUserID), eq("dateInUTC", dateInUTC));
             activityColl.replaceOne(activityFilter, activityDoc, new UpdateOptions().upsert(true));
 
             // Update Days Collection
-            storeDay(dateInMillis, steps, activities);
+            storeDay(dateInUTC, steps);
         });
     }
 
@@ -221,14 +222,12 @@ public class DbConnector extends MongoClient {
         return min + (int)(Math.random() * ((max - min) + 1));
     }
 
-
     /**
      * stores the days (basically date, steps and number of entries) in the database
-     * @param date : the date in milliseconds since 1970
+     * @param date : the date in UTC
      * @param steps : the steps on that day
-     * @param activities: the activities on that day
      */
-    private void storeDay(Long date, int steps, Map<String, Integer> activities) {
+    private void storeDay(Long date, int steps) {
 
         Document newDayDoc = new Document("_id", date);
         // In the case, that this is the first entry on this day
@@ -245,7 +244,9 @@ public class DbConnector extends MongoClient {
         // update the number of entries, the average and the date
         newDayDoc.put("entries", entries+1 );
         newDayDoc.put("average", newAverage);
-        newDayDoc.put("timeMillis", date);
+        //newDayDoc.put("timeMillis", date);
+        newDayDoc.put("dateInUTC", date);
+
 
         // update the entry in the day collection (insert if it doesn't exist yet)
         daysColl.replaceOne(eq("_id", date), newDayDoc, new UpdateOptions().upsert(true));
@@ -286,14 +287,14 @@ public class DbConnector extends MongoClient {
                 match(
                         and(
                                 eq("user", sessionUserID),
-                                gte("startMillis", startTime),
-                                lte("endMillis", endTime)
+                                gte("startDateInUTC", startTime),
+                                lte("endDateInUTC", endTime)
                         )
                 ),
 
                 // we want the average steps from the days collection
                 lookup(
-                        "days", "startMillis", "_id", "averages"
+                        "days", "startDateInUTC", "_id", "averages"
                 ),
 
                 // reshape the document by including only the startMillis, steps and average fields
@@ -301,15 +302,14 @@ public class DbConnector extends MongoClient {
                         fields(
                                 excludeId(),
                                 //include("user"),
-                                include("startMillis"),
+                                include("startDateInUTC"),
                                 include("steps"),
                                 computed("average", "$averages.average")
                         )
                 )
         ))) {
-
             // get the date
-            Long date = (Long) document.get("startMillis");
+            Long date = (Long) document.get("startDateInUTC");
 
             // get the activities for the current user and the current date
             AggregateIterable<Document> databaseRequest = db.getCollection("activities").aggregate(Arrays.asList(
@@ -318,7 +318,7 @@ public class DbConnector extends MongoClient {
                     match(
                             and(
                                     eq("user", sessionUserID),
-                                    eq("timeMillis", date)
+                                    eq("dateInUTC", date)
                             )
                     ),
                     // we are only interested in the activities
@@ -351,7 +351,6 @@ public class DbConnector extends MongoClient {
             // so we simply extract the value and put it back into the document
             ArrayList average = (ArrayList) document.get("average");
             document.put("average", average.get(0));
-
         }
         return JSON.serialize(docList);
     }

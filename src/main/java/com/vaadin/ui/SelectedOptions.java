@@ -14,6 +14,7 @@ class SelectedOptions {
     private String dotTypeSelection;
     private String timeSelected;
     private String plotSelected;
+    private String sortBarsBy;
 
     /**
      * constructor
@@ -24,9 +25,10 @@ class SelectedOptions {
      * @param dotTypeSelection which dot types the user has selected
      * @param timeSelected which time the user has selected
      * @param plotSelected whether the bar chart or the line chart is selected
+     * @param sortBarsBy whether to sort the bars by date, or in ascending or in descending order
      */
     SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, long startDate, long endDate,
-                    String dotTypeSelection, String timeSelected, String plotSelected) {
+                    String dotTypeSelection, String timeSelected, String plotSelected, String sortBarsBy) {
         this.colorForAvgSteps = colorForAvgSteps;
         this.colorForUserSteps = colorForUserSteps;
         this.startDate = startDate;
@@ -34,6 +36,7 @@ class SelectedOptions {
         this.dotTypeSelection = dotTypeSelection;
         this.timeSelected = timeSelected;
         this.plotSelected = plotSelected;
+        this.sortBarsBy = sortBarsBy;
     }
     
     /**
@@ -48,7 +51,8 @@ class SelectedOptions {
                 "\"endDate\":\"" + getEndDate() + "\"," +
                 "\"timeSelected\":\"" + getTimeSelected() + "\"," +
                 "\"dotTypeSelection\":\"" + getDotTypeSelection() + "\"," +
-                "\"plotSelected\":\"" + getPlotSelected() + "\"" +
+                "\"plotSelected\":\"" + getPlotSelected() + "\"," +
+                "\"sortBarsBy\":\"" + getSortBarsBy() + "\"" +
                 "}";
     }
 
@@ -108,4 +112,8 @@ class SelectedOptions {
     String getPlotSelected() { return plotSelected; }
 
     void setPlotSelected(String plotSelected) { this.plotSelected = plotSelected; }
+
+    public String getSortBarsBy() { return sortBarsBy; }
+
+    public void setSortBarsBy(String sortBarsBy) { this.sortBarsBy = sortBarsBy; }
 }

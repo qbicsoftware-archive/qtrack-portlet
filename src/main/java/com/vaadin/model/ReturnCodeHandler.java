@@ -19,7 +19,8 @@ public class ReturnCodeHandler implements RequestHandler{
      * @return whether the request could be handled successfully
      */
     @Override
-    public boolean handleRequest(VaadinSession session, VaadinRequest request, VaadinResponse response) throws IOException {
+    public boolean handleRequest(VaadinSession session, VaadinRequest request, VaadinResponse response)
+            throws IOException {
         if (request.getParameter("code") != null) {
             String code = request.getParameter("code");
             authRequest.handleReturnCode(code);
