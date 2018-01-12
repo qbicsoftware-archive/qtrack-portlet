@@ -21,17 +21,17 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
 
     // Scale the range of the data
     x.domain(d3.extent(dat, function(d) { return d.startDateInUTC; }));
-    y.domain([0, d3.max(dat, function(d) {return Math.max(d.usersteps, d.averagesteps); })]);
+    y.domain([0, d3.max(dat, function(d) {return Math.max(d.steps, d.averageSteps); })]);
 
     // define the 1st line
     var userStepsLine = d3.line()
         .x(function(d) { return x(d.startDateInUTC); })
-        .y(function(d) { return y(d.usersteps); });
+        .y(function(d) { return y(d.steps); });
 
     // define the 2nd line
     var avgStepsLine = d3.line()
         .x(function(d) { return x(d.startDateInUTC); })
-        .y(function(d) { return y(d.averagesteps); });
+        .y(function(d) { return y(d.averageSteps); });
 
     // Add the user steps
     g.append("path")
@@ -51,7 +51,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("r", 5)
         .attr("cx", function(d) { return x(d.startDateInUTC); })
         .attr("cy", function(d) { return y(d.steps); })
-        .attr("transform", "translate(50,12)")
+        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
         .attr("fill", selectedOptions.colorForUserSteps)
         .attr("id", function(d,i) { return "user_"+i; })
         .append("svg:title")
@@ -71,12 +71,77 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .enter().append("circle")
         .attr("r", 5)
         .attr("cx", function(d) { return x(d.startDateInUTC); })
-        .attr("cy", function(d) { return y(d.averagesteps); })
-        .attr("transform", "translate(50,12)")
+        .attr("cy", function(d) { return y(d.averageSteps); })
+        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
         .attr("fill", selectedOptions.colorForAvgSteps)
         .attr("id", function(d,i) { return "avg_"+i; })
         .append("svg:title")
         .text(function(d, i) { return timeFormat(d.startDateInUTC)});
+
+
+    // Add Error Line
+    svg.append("g").selectAll("line")
+    	.data(dat).enter()
+        .append("line")
+        .attr("class", "error-line")
+        .attr("x1", function(d) {
+            return x(d.startDateInUTC);
+        })
+        .attr("y1", function(d) {
+            return y(d.averageSteps + d.stdErrorOfMean);
+        })
+        .attr("x2", function(d) {
+            return x(d.startDateInUTC);
+        })
+        .attr("y2", function(d) {
+            return y(d.averageSteps - d.stdErrorOfMean);
+        })
+        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("stroke-width", 2)
+        .style("stroke-dasharray", ("3, 3"))
+        .attr("stroke", "black");
+
+    // Add Error Top Cap
+    svg.append("g").selectAll("line")
+    	.data(dat).enter()
+        .append("line")
+        .attr("class", "error-cap")
+        .attr("x1", function(d) {
+      	    return x(d.startDateInUTC) - 4;
+        })
+        .attr("y1", function(d) {
+            return y(d.averageSteps + d.stdErrorOfMean);
+        })
+        .attr("x2", function(d) {
+      	    return x(d.startDateInUTC) + 4;
+        })
+        .attr("y2", function(d) {
+      	    return y(d.averageSteps + d.stdErrorOfMean);
+        })
+        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("stroke-width", 2)
+        .attr("stroke", "black");
+
+     // Add Error Bottom Cap
+    svg.append("g").selectAll("line")
+    	.data(dat).enter()
+        .append("line")
+        .attr("class", "error-cap")
+        .attr("x1", function(d) {
+        	return x(d.startDateInUTC) - 4;
+        })
+        .attr("y1", function(d) {
+        	return y(d.averageSteps - d.stdErrorOfMean);
+        })
+        .attr("x2", function(d) {
+        	return x(d.startDateInUTC) + 4;
+        })
+        .attr("y2", function(d) {
+        	return y(d.averageSteps - d.stdErrorOfMean);
+        })
+        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("stroke-width", 2)
+        .attr("stroke", "black");
 
 
     /**
@@ -133,10 +198,10 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         document.getElementById("avg_"+k).addEventListener("mouseover", function() {
             console.log("mouse over avg" + k);
             console.log(x(dat[k].startDateInUTC));
-            console.log(y(dat[k].averagesteps));
+            console.log(y(dat[k].averageSteps));
             var isUserSelected = false;
-            createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].averagesteps),
-                "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averagesteps,
+            createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].averageSteps),
+                "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averageSteps,
                 "notSelectedSteps": dat[k].steps}, isUserSelected);
         });
 
@@ -146,8 +211,8 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
             console.log(y(dat[k].steps));
             var isUserSelected = true;
             createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].steps),
-                "cy_other": y(dat[k].averagesteps), "selectedSteps": dat[k].steps,
-                "notSelectedSteps": dat[k].averagesteps}, isUserSelected);
+                "cy_other": y(dat[k].averageSteps), "selectedSteps": dat[k].steps,
+                "notSelectedSteps": dat[k].averageSteps}, isUserSelected);
         });
 
         // when user stops hovering over a dot ..

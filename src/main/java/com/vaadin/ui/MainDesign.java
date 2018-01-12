@@ -20,8 +20,6 @@ public class MainDesign extends HorizontalLayout {
     protected Label nameLabel;
     protected Button menuButton;
     protected CssLayout menu;
-    protected Button dashboard;
-    protected Button reports;
     protected Button steps_linechart;
     protected Button activity_barchart;
     protected Button download_data;

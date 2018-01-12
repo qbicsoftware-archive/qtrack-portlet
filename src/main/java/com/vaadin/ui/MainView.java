@@ -1,12 +1,14 @@
 package com.vaadin.ui;
 
 import com.vaadin.data.HasValue;
+import com.vaadin.icons.VaadinIcons;
 import com.vaadin.model.DataRequest;
 import com.vaadin.model.DbConnector;
 import com.vaadin.navigator.View;
 import com.vaadin.navigator.ViewChangeListener;
 import com.vaadin.server.*;
 import com.vaadin.shared.ui.colorpicker.Color;
+import org.bson.Document;
 import org.json.CDL;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -15,9 +17,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Objects;
+import java.util.*;
 
 
 /**
@@ -59,20 +59,61 @@ public class MainView extends MainDesign implements View {
                 "Circles", "Monthly", "LineChart", "Date");
 
         // hand the data (stored in chartComponent) and the selected options to the line chart
-        setDataForLineChart(chartComponent, selectedOptions);
+        setDataForCharts(chartComponent, selectedOptions);
 
         // add all the listener to the view
         addListenerToView(chartComponent, selectedOptions);
+
+        // TODO: testing
+        List<Document> menuItems = dbConnector.extractMenuItemsCollection();
+
+        System.out.println("menu items:");
+        System.out.println(menuItems);
+
+        List<Button> buttonList = new ArrayList<>();
+        for (Document b : menuItems) {
+            System.out.println(b);
+            System.out.println(b.get("button_caption"));
+
+            // create the new button
+            Button tempButton = new Button(b.get("button_caption").toString());
+            tempButton.setIcon(VaadinIcons.valueOf(b.get("button_icon").toString()));
+            tempButton.setStyleName("borderless");
+            tempButton.setWidth("100%");
+
+            // add it on top to the menu
+            menu.addComponent(tempButton, 0);
+            buttonList.add(tempButton);
+
+            tempButton.addClickListener(event -> {
+                selectedOptions.setPlotSelected("LineChart");
+                viewTitle.setValue("sample data");
+                setDataForCharts(chartComponent, selectedOptions);
+            });
+        }
+
+        // List of planets
+/*        ComboBox<String> select = new ComboBox<>("Select or Add a Planet");
+        select.setItems("test213", "lalala", "hehe", "xyz");
+        menu.addComponent(select);
+
+        Button testButton = new Button("test");
+        testButton.setIcon(VaadinIcons.AMBULANCE);
+        testButton.setStyleName("borderless");
+        testButton.setWidth("100%");
+        menu.addComponent(testButton);*/
+
     }
 
     /**
      * prepares the user data by converting the unix time to a date and flattening the activities array
      * @param userDataAsJsonArray: user data stored in a json array:
-     *                           [{"startDateInUTC":1510185600000,"average":2597.659574468085,"activities":
+     *                           [{"startDateInUTC":1510185600000,"averageSteps":2597.659574468085,"activities":
      *                           {"still":23249677,"walking":2153308,"in_vehicle":1745901,"sleeping":23000271},
-     *                           "steps":489}, ...]
+     *                           "steps":489, "stdErrorOfMean" : 1008.1493738529028}, ...]
      * @return JSONArray [{"date":09-11-2017,"average steps":2597.659574468085,"still[ms]":23249677,
-     * "walking[ms]":2153308,"in_vehicle[ms]":1745901,"sleeping[ms]":23000271,"steps":489}, ...]
+     * "walking[ms]":2153308,"in_vehicle[ms]":1745901,"sleeping[ms]":23000271,"steps":489,
+     * "stdErrorOfMean" : 1008.1493738529028}, ...]
      */
     private JSONArray prepareUserData(JSONArray userDataAsJsonArray) {
 
@@ -82,17 +123,12 @@ public class MainView extends MainDesign implements View {
             // get the current json object
             JSONObject currentJsonObject = userDataAsJsonArray.getJSONObject(i);
 
-            // change the name of the average steps column
-            float averageSteps = currentJsonObject.getFloat("average");
-            currentJsonObject.put("average steps", averageSteps);
-            currentJsonObject.remove("average");
-
             // convert the date from unix time to a european data format (1510185600000 -> 09-11-2017) and put it back
             // to the json object
             Date date = new Date(currentJsonObject.getLong("startDateInUTC"));
             SimpleDateFormat sm = new SimpleDateFormat("dd-MM-yyyy");
             String strDate = sm.format(date);
-            currentJsonObject.remove("startMillis");
+            currentJsonObject.remove("startDateInUTC");
             currentJsonObject.put("date", strDate);
 
             // flatten the activities array: "activities": {"still":23249677,"walking":2153308,"in_vehicle":1745901,
@@ -127,23 +163,13 @@ public class MainView extends MainDesign implements View {
             } else {
                 // set the selected time and the data
                 selectedOptions.setTimeSelected(valueChangeEvent.getValue());
-                setDataForLineChart(chartComponent, selectedOptions);
+                setDataForCharts(chartComponent, selectedOptions);
             }
         });
 
         // Handle the events with an anonymous class
         // https://vaadin.com/docs/-/part/framework/application/application-events.html
         // https://vaadin.com/docs/-/part/framework/application/application-notifications.html
-        dashboard.addClickListener(event -> {
-            //dashboard.setCaption("dashboard clicked!");
-            Notification.show("Dashboard clicked!");
-        });
-
-        reports.addClickListener(event -> {
-            //reports.setCaption("reports clicked!");
-            Notification.show("Reports clicked!");
-        });
-
         settings.addClickListener(event -> {
             // open the settings window
             openSettingsWindow(chartComponent, selectedOptions);
@@ -152,13 +178,13 @@ public class MainView extends MainDesign implements View {
         steps_linechart.addClickListener(event -> {
             selectedOptions.setPlotSelected("LineChart");
             viewTitle.setValue("Steps data");
-            setDataForLineChart(chartComponent, selectedOptions);
+            setDataForCharts(chartComponent, selectedOptions);
         });
 
         activity_barchart.addClickListener(event -> {
             selectedOptions.setPlotSelected("StackedBarChart");
             viewTitle.setValue("Activity data");
-            setDataForLineChart(chartComponent, selectedOptions);
+            setDataForCharts(chartComponent, selectedOptions);
         });
 
         // add a file downloader to the download_data button
@@ -166,6 +192,8 @@ public class MainView extends MainDesign implements View {
             try {
                 // get the user data
                 String userData = chartComponent.getData();
+
+                System.out.println(userData);
 
                 // convert it to json
                 JSONArray userDataAsJsonArray = new JSONArray(userData);
@@ -199,7 +227,7 @@ public class MainView extends MainDesign implements View {
      * @param chartComponent: the connector between vaadin and javascript
      * @param selectedOptions: Object holding all the selected options
      */
-    private void setDataForLineChart(ChartComponent chartComponent, SelectedOptions selectedOptions) {
+    private void setDataForCharts(ChartComponent chartComponent, SelectedOptions selectedOptions) {
 
         switch (selectedOptions.getTimeSelected()) {
             case "Weekly":
@@ -354,7 +382,7 @@ public class MainView extends MainDesign implements View {
         //fourthColumn.addComponent(new Label("Dot type selection:"));
 
         // select the dot type
-        RadioButtonGroup<String> dotTypeRadioButton =
+        /*RadioButtonGroup<String> dotTypeRadioButton =
                 //new RadioButtonGroup<>("Select Dot Type");
                 new RadioButtonGroup<>();
         dotTypeRadioButton.setItems("Circles", "Rectangles", "Triangles");
@@ -362,7 +390,7 @@ public class MainView extends MainDesign implements View {
         dotTypeRadioButton.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
             selectedOptions.setDotTypeSelection(valueChangeEvent.getValue());
             Notification.show(valueChangeEvent.getValue());
-        });
+        });*/
         //fourthColumn.addComponent(dotTypeRadioButton);    TODO
 
         VerticalLayout fifthColumn = new VerticalLayout();
@@ -374,7 +402,7 @@ public class MainView extends MainDesign implements View {
                 selectedOptions.setTimeSelected("Custom Date");
             }
 
-            setDataForLineChart(chartComponent, selectedOptions);
+            setDataForCharts(chartComponent, selectedOptions);
             subWindow.close();
             System.out.println(selectedOptions.getJSONRepresentation());
         });

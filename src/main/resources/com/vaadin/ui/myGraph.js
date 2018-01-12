@@ -11,8 +11,6 @@ myGraph.ChartComponent = function (element) {
     var selectedOptions;
     var selectedCategoriesForBarChart = null;   // stores the categories selected from the user for the bar chart
 
-    // TODO: create an object holding all the window variables in myGraph.js and hand it over as parameter
-
     // some variables for the window sizes:
     var w,d,e,windowG,windowX,windowY,vaadin_menu_width,margin,width,height,svg,g,adjusted_height,x,y;
 
@@ -24,13 +22,6 @@ myGraph.ChartComponent = function (element) {
         selectedOptions = JSON.parse(userSelectedOptions);
 
         console.log(selectedOptions);
-
-        // TODO: check if this is really necessary
-        dat.forEach(function (d) {
-            d.usersteps = +d.steps;
-            d.averagesteps = +d.average;
-            // d.millisstart = +d.startDateInUTC;
-        });
 
         // sort the data by time
         data = dat.sort(function(a,b){
@@ -57,15 +48,19 @@ myGraph.ChartComponent = function (element) {
                 selectedCategoriesForBarChart =
                     drawStackedBarChart(data, selectedOptions, element, svg, g, width, adjusted_height, margin,
                         selectedCategoriesForBarChart);
+                console.log("mygraph after:")
+                console.log(selectedCategoriesForBarChart);
                 break;
         }
     }
 
 
     /*
-     * this function updates the variables related to the window 
+     * updates the variables related to the window
      */
     function updateWindowVariables() {
+
+        console.log("window var")
 
         // get the current window sizes
         w = window,
@@ -114,9 +109,7 @@ myGraph.ChartComponent = function (element) {
         // update width, height, etc. for the window
         updateWindowVariables();
 
-        // draw the data
-        // TODO: draw chart depending on selected option
-        //drawLineChart(data);
+        // draw the chart
         drawChart();
     }
 
@@ -144,7 +137,5 @@ myGraph.ChartComponent = function (element) {
         clearTimeout(timeoutForResizeWindow);
         timeoutForResizeWindow = setTimeout(updateView, 200);
     });
-
-
 
 };

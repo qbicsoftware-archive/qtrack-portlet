@@ -148,9 +148,9 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
 
     // check if there is at least one category to display
     var hasCategoryBeenFound = false;
+    console.log("selected activities:");
     for (var i = 0; i < selectedActivities.length; i++) {
         console.log(selectedActivities[i]);
-        console.log(allActivities.indexOf(selectedActivities[i]) > -1);
         if (allActivities.indexOf(selectedActivities[i]) > -1) {
             hasCategoryBeenFound = true;
         }
@@ -224,8 +224,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     });
 
     // sort the data by total activity time
-
-
     //data.sort(function(a, b) { return b.total - a.total; });
 
     // setup the domains for the scales
@@ -337,21 +335,25 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
             // category is in array -> user wants to disable the category -> remove it
             if (posOfCurrentCategoryInArray > -1) {
 
-                // if there is at least one active category
                 if (selectedActivities.length > 0) {
                     // disable the clicked category
                     selectedActivities.splice(posOfCurrentCategoryInArray, 1);
-                } else {
-                    // redraw the chart with all categories set to selected
-                    drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, allActivities);
                 }
+
             // category is not in array -> add it
             } else {
                 selectedActivities.push(currentCategory);
             }
 
+            console.log("selected activities:");
+            console.log(selectedActivities);
+
             // redraw the chart with the selected categories
-            drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, selectedActivities);
+            try {
+                return selectedActivities;
+            } finally {
+                drawStackedBarChart(data, selectedOptions, element, svg, g, width, height, margin, selectedActivities);
+            }
         });
 
     // mark the active categories as selected in the legend by setting a border for the respective rectangle
@@ -399,6 +401,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     }
 */
 
-    // return the categories selected by the user
+    // send the selected activities back to my graph
     return selectedActivities;
 }

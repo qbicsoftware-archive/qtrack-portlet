@@ -1,9 +1,8 @@
 package com.vaadin.model;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
-import com.mongodb.client.AggregateIterable;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.*;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.util.JSON;
 import org.bson.Document;
@@ -94,21 +93,21 @@ public class DbConnector extends MongoClient {
         ArrayList<Document> dayList = (ArrayList<Document>)stepDoc.get("bucket");
 
         // grab the step and activity data for each day
-        dayList.forEach(document -> {
+        dayList.forEach(stepsDocument -> {
 
             // get the date
-            long dateInUTC = Long.valueOf(document.get("startTimeMillis").toString());
+            long dateInUTC = Long.valueOf(stepsDocument.get("startTimeMillis").toString());
 
             // variables for holding the step data and the activity data
             int steps = -1;
             Map<String, Integer> activities = new HashMap<>();
 
             // Assign steps to currently logged in User
-            document.append("user", sessionUserID);
+            stepsDocument.append("user", sessionUserID);
 
             // get the data set from the document and store it in a array list of documents
             @SuppressWarnings("unchecked")
-            ArrayList<Document> dataSetList  =  (ArrayList<Document>) document.get("dataset");
+            ArrayList<Document> dataSetList  =  (ArrayList<Document>) stepsDocument.get("dataset");
 
             // iterate over each document representing either step or activity data from google
             for (Document documentInDatasets : dataSetList) {
@@ -183,32 +182,32 @@ public class DbConnector extends MongoClient {
             }
 
             // Convert timeInMillis to long
-            document.put("steps", steps);
-            document.put("startDateInUTC", dateInUTC);
-            document.put("endDateInUTC", Long.valueOf(document.get("endTimeMillis").toString()));
+            stepsDocument.put("steps", steps);
+            stepsDocument.put("startDateInUTC", dateInUTC);
+            stepsDocument.put("endDateInUTC", Long.valueOf(stepsDocument.get("endTimeMillis").toString()));
 
             // remove unnecessary fields in the document
-            document.remove("dataset");
-            document.remove("startTimeMillis");
-            document.remove("endTimeMillis");
+            stepsDocument.remove("dataset");
+            stepsDocument.remove("startTimeMillis");
+            stepsDocument.remove("endTimeMillis");
 
+/*      TODO: remove
             // store steps in the database with the user id as identifier
             Bson stepFilter = and(eq("user", sessionUserID), eq("startDateInUTC", dateInUTC));
             stepColl.replaceOne(stepFilter, document, new UpdateOptions().upsert(true));
+*/
 
             // create the document for the activities
             Document activityDoc = new Document("user", sessionUserID);
             activityDoc.put("activities", activities);
-            //activityDoc.put("timeMillis", dateInMillis);
             activityDoc.put("dateInUTC", dateInUTC);
 
             // store activities in the database with the user id as identifier
-            //Bson activityFilter = and(eq("user", sessionUserID), eq("timeMillis", dateInUTC));
             Bson activityFilter = and(eq("user", sessionUserID), eq("dateInUTC", dateInUTC));
             activityColl.replaceOne(activityFilter, activityDoc, new UpdateOptions().upsert(true));
 
             // Update Days Collection
-            storeDay(dateInUTC, steps);
+            storeDayAndSteps(dateInUTC, steps, stepsDocument);
         });
     }
 
@@ -223,32 +222,86 @@ public class DbConnector extends MongoClient {
     }
 
     /**
-     * stores the days (basically date, steps and number of entries) in the database
-     * @param date : the date in UTC
-     * @param steps : the steps on that day
+     * stores the days (basically date, steps and number of entries) and the steps in the database
+     * @param date : date in UTC
+     * @param steps : steps on that day
+     * @param stepsDocument: document for the steps
      */
-    private void storeDay(Long date, int steps) {
+    private void storeDayAndSteps(Long date, int steps, Document stepsDocument) {
 
-        Document newDayDoc = new Document("_id", date);
-        // In the case, that this is the first entry on this day
-        double newAverage = steps;
-        int entries = 0;
+        // the sums for calculating the mean and the std error mean
+        double sum0 = 0;
+        double sum1 = 0;
+        double sum2 = 0;
 
-        // Recalculate values when this day is already in the collection
+        // holds the sums for calculating the mean and the std error mean
+        Map<String, Double> sumsForMeanAndSEM = new HashMap<>();
+        sumsForMeanAndSEM.put("sum0", sum0);
+        sumsForMeanAndSEM.put("sum1", sum1);
+        sumsForMeanAndSEM.put("sum2", sum2);
+
+        // day is already in the collection
         if (daysColl.count(eq("_id", date)) > 0) {
-            double oldAverage = Double.valueOf(daysColl.find(eq("_id", date)).first().get("average").toString());
-            entries = daysColl.find(eq("_id", date)).first().getInteger("entries");
-            newAverage = ((oldAverage * entries) + steps) / (entries + 1);
+
+            // get the day document
+            Document dayDoc = daysColl.find(eq("_id", date)).first();
+
+            // query the steps collection for the current date and user
+            BasicDBObject andQuery = new BasicDBObject();
+            List<BasicDBObject> queryFields = new ArrayList<>();
+            queryFields.add(new BasicDBObject("user", sessionUserID));
+            queryFields.add(new BasicDBObject("startDateInUTC", date));
+            andQuery.put("$and", queryFields);
+            FindIterable<Document> cursor = stepColl.find(andQuery);
+
+            // check if we have data from that user for the current day
+            if (cursor.first() != null) {
+                return;
+            // we don't have the data from this user for this day
+            } else {
+                // get the hash map holding the sums of the other users for calculating the mean and the std error of
+                // mean
+                sumsForMeanAndSEM = (Map<String, Double>) dayDoc.get("sumsForMeanAndSEM");
+
+                // get the sums from the hash map
+                sum0 = sumsForMeanAndSEM.get("sum0");
+                sum1 = sumsForMeanAndSEM.get("sum1");
+                sum2 = sumsForMeanAndSEM.get("sum2");
+            }
         }
 
-        // update the number of entries, the average and the date
-        newDayDoc.put("entries", entries+1 );
-        newDayDoc.put("average", newAverage);
-        //newDayDoc.put("timeMillis", date);
+        // update the sums with the values from the current day
+        sum0 += 1;
+        sum1 += steps;
+        sum2 += steps*steps;
+
+        // calculate the mean and the stdErrorOfMean (SEM)
+        double mean = sum1/sum0;
+        double stdDev = 0;
+        if (sum0 > 2) {
+            stdDev = Math.sqrt((sum0 * sum2 - sum1 * sum1)/(sum0 * (sum0 - 1)));
+        }
+        double stdErrorOfMean = stdDev/Math.sqrt(sum0);
+
+        // update the hash map holding the sums
+        sumsForMeanAndSEM.put("sum0", sum0);
+        sumsForMeanAndSEM.put("sum1", sum1);
+        sumsForMeanAndSEM.put("sum2", sum2);
+
+        // create a new document for the current day
+        Document newDayDoc = new Document("_id", date);
+
+        // put the values we want to store in the database in the new document
+        newDayDoc.put("sumsForMeanAndSEM", sumsForMeanAndSEM);
+        newDayDoc.put("mean", mean);
+        newDayDoc.put("stdErrorOfMean", stdErrorOfMean);
         newDayDoc.put("dateInUTC", date);
 
+        // store steps in the database with the user id as identifier
+        Bson stepFilter = and(eq("user", sessionUserID), eq("startDateInUTC", date));
+        stepColl.replaceOne(stepFilter, stepsDocument, new UpdateOptions().upsert(true));
 
-        // update the entry in the day collection (insert if it doesn't exist yet)
+        // store the current day in the database with the date as identifier
         daysColl.replaceOne(eq("_id", date), newDayDoc, new UpdateOptions().upsert(true));
     }
 
@@ -270,12 +323,27 @@ public class DbConnector extends MongoClient {
         return userColl.find(eq("_id", userID)).first().getString("name");
     }
 
+    public List<Document> extractMenuItemsCollection() {
+
+        List<Document> docList = new ArrayList<>();
+
+        try (MongoCursor<Document> cursor = db.getCollection("menu_items").find().iterator()) {
+            while (cursor.hasNext()) {
+                docList.add(cursor.next());
+                // System.out.println(cursor.next().toJson());
+            }
+        }
+
+        // return JSON.serialize(docList);
+        return docList;
+    }
+
     /**
      * extracts all the data from the database within the range of startTime and endTime and returns them in json format
-     * @param startTime: the start of the interval (date in milliseconds since 1970)
-     * @param endTime: the end of the interval (date in milliseconds since 1970)
-     * @return json formatted string holding the date (in milliseconds), the steps of the current user and the
-     *          average steps of the other users
+     * @param startTime: the start of the interval (date in UTC)
+     * @param endTime: the end of the interval (date in UTC)
+     * @return json formatted string holding the date (in milliseconds), the steps and the activities of the current
+     * user, the average steps of the other users and the std error of mean for it
      */
     public String extractData(Long startTime, Long endTime) {
 
@@ -294,7 +362,7 @@ public class DbConnector extends MongoClient {
 
                 // we want the average steps from the days collection
                 lookup(
-                        "days", "startDateInUTC", "_id", "averages"
+                        "days", "startDateInUTC", "_id", "means"
                 ),
 
                 // reshape the document by including only the startMillis, steps and average fields
@@ -304,7 +372,8 @@ public class DbConnector extends MongoClient {
                                 //include("user"),
                                 include("startDateInUTC"),
                                 include("steps"),
-                                computed("average", "$averages.average")
+                                computed("mean", "$means.mean"),
+                                computed("stdErrorOfMean", "$means.stdErrorOfMean")
                         )
                 )
         ))) {
@@ -349,8 +418,13 @@ public class DbConnector extends MongoClient {
 
             // for some reason the average steps are projected onto a array containing a single double value,
             // so we simply extract the value and put it back into the document
-            ArrayList average = (ArrayList) document.get("average");
-            document.put("average", average.get(0));
+            ArrayList mean = (ArrayList) document.get("mean");
+            document.put("averageSteps", mean.get(0));
+            document.remove("mean");
+
+            ArrayList stdErrorOfMean = (ArrayList) document.get("stdErrorOfMean");
+            document.put("stdErrorOfMean", stdErrorOfMean.get(0));
+
         }
         return JSON.serialize(docList);
     }
