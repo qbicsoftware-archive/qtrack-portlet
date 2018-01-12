@@ -187,7 +187,8 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .range(colorRange);
 
     // time format for the dates
-    var timeFormat = d3.timeFormat("%d-%m-%Y");
+    // var timeFormat = d3.timeFormat("%d-%m-%Y");
+    var timeFormat = d3.timeFormat(selectedOptions.timeFormat);
 
     // prepare the data ..
     data.forEach(function (d) {

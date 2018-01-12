@@ -42,7 +42,8 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("stroke-width", "3px");
 
     // time format for the dates
-    var timeFormat = d3.timeFormat("%d-%m-%Y");
+    // var timeFormat = d3.timeFormat("%d-%m-%Y");
+    var timeFormat = d3.timeFormat(selectedOptions.timeFormat);
 
     // add the circles to select the tooltips
     svg.selectAll("dot")

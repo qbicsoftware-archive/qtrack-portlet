@@ -56,7 +56,8 @@ public class MainView extends MainDesign implements View {
         // default options for the customize tab
         SelectedOptions selectedOptions = new SelectedOptions(Color.RED,
                 new Color(70,130,180), lastMonth(), getNow(),
-                "Circles", "Monthly", "LineChart", "Date");
+                "Circles", "Monthly", "LineChart", "Date",
+                "%d-%m-%Y");
 
         // hand the data (stored in chartComponent) and the selected options to the line chart
         setDataForCharts(chartComponent, selectedOptions);
@@ -66,10 +67,6 @@ public class MainView extends MainDesign implements View {
 
         // TODO: testing
         List<Document> menuItems = dbConnector.extractMenuItemsCollection();
-
-        System.out.println("menu items:");
-        System.out.println(menuItems);
-
         List<Button> buttonList = new ArrayList<>();
         for (Document b : menuItems) {
             System.out.println(b);
@@ -379,7 +376,72 @@ public class MainView extends MainDesign implements View {
 
         // fourth column:
         VerticalLayout fourthColumn = new VerticalLayout();
-        //fourthColumn.addComponent(new Label("Dot type selection:"));
+        fourthColumn.addComponent(new Label("Time format selection:"));
+
+        // create the combo box holding the different time formats for the tooltips and the x-axis
+        ComboBox<String> timeFormatComboBox = new ComboBox<>();
+        timeFormatComboBox.setEmptySelectionAllowed(false);
+        timeFormatComboBox.setItems("TT-MM-JJJJ", "TT-MM-JJ", "TT.MM.JJJJ", "TT.MM.JJ", "TT.MMM.JJJJ", "JJJJ-MM-TT",
+                "JJ-MM-TT", "JJJJ-MMM-TT");
+
+        // set the value of the timeFormatBox according to the selected option
+        switch (selectedOptions.getTimeFormat()){
+            case "%d-%m-%Y":
+                timeFormatComboBox.setValue("TT-MM-JJJJ");
+                break;
+            case "%d-%m-%y":
+                timeFormatComboBox.setValue("TT-MM-JJ");
+                break;
+            case "%d.%m.%Y":
+                timeFormatComboBox.setValue("TT.MM.JJJJ");
+                break;
+            case "%d.%b.%Y":
+                timeFormatComboBox.setValue("TT.MMM.JJJJ");
+                break;
+            case "%d.%m.%y":
+                timeFormatComboBox.setValue("TT.MM.JJ");
+                break;
+            case "%Y-%m-%d":
+                timeFormatComboBox.setValue("JJJJ-MM-TT");
+                break;
+            case "%Y-%b-%d":
+                timeFormatComboBox.setValue("JJJJ-MMM-TT");
+                break;
+            case "%y-%m-%d":
+                timeFormatComboBox.setValue("JJ-MM-TT");
+                break;
+        }
+
+        timeFormatComboBox.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
+            switch (valueChangeEvent.getValue()){
+                case "TT-MM-JJJJ":
+                    selectedOptions.setTimeFormat("%d-%m-%Y");
+                    break;
+                case "TT-MM-JJ":
+                    selectedOptions.setTimeFormat("%d-%m-%y");
+                    break;
+                case "TT.MM.JJJJ":
+                    selectedOptions.setTimeFormat("%d.%m.%Y");
+                    break;
+                case "TT.MMM.JJJJ":
+                    selectedOptions.setTimeFormat("%d.%b.%Y");
+                    break;
+                case "TT.MM.JJ":
+                    selectedOptions.setTimeFormat("%d.%m.%y");
+                    break;
+                case "JJJJ-MM-TT":
+                    selectedOptions.setTimeFormat("%Y-%m-%d");
+                    break;
+                case "JJJJ-MMM-TT":
+                    selectedOptions.setTimeFormat("%Y-%b-%d");
+                    break;
+                case "JJ-MM-TT":
+                    selectedOptions.setTimeFormat("%y-%m-%d");
+                    break;
+            }
+        });
+        fourthColumn.addComponent(timeFormatComboBox);
+
 
         // select the dot type
         /*RadioButtonGroup<String> dotTypeRadioButton =

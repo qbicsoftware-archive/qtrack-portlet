@@ -15,6 +15,7 @@ class SelectedOptions {
     private String timeSelected;
     private String plotSelected;
     private String sortBarsBy;
+    private String timeFormat;
 
     /**
      * constructor
@@ -28,7 +29,8 @@ class SelectedOptions {
      * @param sortBarsBy whether to sort the bars by date, or in ascending or in descending order
      */
     SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, long startDate, long endDate,
-                    String dotTypeSelection, String timeSelected, String plotSelected, String sortBarsBy) {
+                    String dotTypeSelection, String timeSelected, String plotSelected, String sortBarsBy,
+                    String timeFormat) {
         this.colorForAvgSteps = colorForAvgSteps;
         this.colorForUserSteps = colorForUserSteps;
         this.startDate = startDate;
@@ -37,6 +39,7 @@ class SelectedOptions {
         this.timeSelected = timeSelected;
         this.plotSelected = plotSelected;
         this.sortBarsBy = sortBarsBy;
+        this.timeFormat = timeFormat;
     }
     
     /**
@@ -52,10 +55,10 @@ class SelectedOptions {
                 "\"timeSelected\":\"" + getTimeSelected() + "\"," +
                 "\"dotTypeSelection\":\"" + getDotTypeSelection() + "\"," +
                 "\"plotSelected\":\"" + getPlotSelected() + "\"," +
-                "\"sortBarsBy\":\"" + getSortBarsBy() + "\"" +
+                "\"sortBarsBy\":\"" + getSortBarsBy() + "\"," +
+                "\"timeFormat\":\"" + getTimeFormat() + "\"" +
                 "}";
     }
-
 
     /*
     All the setter and getter methods for the fields..
@@ -116,4 +119,8 @@ class SelectedOptions {
     public String getSortBarsBy() { return sortBarsBy; }
 
     public void setSortBarsBy(String sortBarsBy) { this.sortBarsBy = sortBarsBy; }
+
+    public String getTimeFormat() { return timeFormat; }
+
+    public void setTimeFormat(String timeFormat) { this.timeFormat = timeFormat; }
 }
