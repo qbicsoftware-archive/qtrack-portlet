@@ -22,6 +22,7 @@ public class MainDesign extends HorizontalLayout {
     protected CssLayout menu;
     protected Button steps_linechart;
     protected Button activity_barchart;
+    protected Button calendar_chart;
     protected Button download_data;
     protected Button settings;
     protected Button logout;

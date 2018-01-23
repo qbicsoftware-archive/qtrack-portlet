@@ -1,42 +1,5 @@
 
 
-/**
- * calculates the total duration of all selected activities on the specified day and returns it
- * @param day: object holding all the activities on that day
- * @param selectedActivities: array holding the activities selected by the user
- * @return {number}: total activity time
- */
-function calculateTotalTimeForActivities(day, selectedActivities) {
-
-    var totalActivityTime = 0;
-    var activities = day.activities;
-    for (var activity in activities) {
-        if (activities.hasOwnProperty(activity) && (selectedActivities.indexOf(activity) > -1)) {
-            totalActivityTime += activities[activity]
-        }
-    }
-    return totalActivityTime;
-}
-
-/**
- * extracts all the activities of the array of object
- * @param data: array of objects
- * @return {*} array with all the activity names, e.g. ["walking", "sleeping", "still"]
- */
-function extractActivityNames(data) {
-
-    // iterate over the data and push the activity name to the array
-    var activityNames = [];
-    for (var i = 0; i < data.length; i++) {
-        activityNames.push(Object.getOwnPropertyNames(data[i].activities));
-    }
-
-    // create a set to get the activities only once even though they might appear multiple times
-    var uniqueActivityNames = new Set([].concat.apply([], activityNames));
-
-    // convert set back to array and return it
-    return Array.from(uniqueActivityNames);
-}
 
 /**
  * creates the tooltip text elements which are displayed when the user is hovering over the dots
@@ -162,7 +125,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     }
 
     // remove previously drawn elements
-    d3.select("svg").remove();
+    d3.selectAll("svg").remove();
 
     // create the svg with the corresponding size
     svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
@@ -187,7 +150,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .range(colorRange);
 
     // time format for the dates
-    // var timeFormat = d3.timeFormat("%d-%m-%Y");
     var timeFormat = d3.timeFormat(selectedOptions.timeFormat);
 
     // prepare the data ..
@@ -225,7 +187,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     });
 
     // sort the data by total activity time
-    //data.sort(function(a, b) { return b.total - a.total; });
+    // data.sort(function(a, b) { return b.total - a.total; });
 
     // setup the domains for the scales
     x.domain(data.map(function(d) { return d.date; }));
@@ -256,7 +218,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
 
     /*.on("mouseover", function(d,i) {
      d3.select(this).attr("fill", function() { return colorRange[colorRange.length-1]});
-     // TODO: last element form color range
+     // TODO: last element from color range
      })
      .on("mouseout", function(d, i) { d3.select(this).attr("fill", function() {
      console.log(d);

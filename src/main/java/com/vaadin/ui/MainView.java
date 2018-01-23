@@ -184,6 +184,12 @@ public class MainView extends MainDesign implements View {
             setDataForCharts(chartComponent, selectedOptions);
         });
 
+        calendar_chart.addClickListener(event -> {
+           selectedOptions.setPlotSelected("CalendarView");
+           viewTitle.setValue("Calendar View");
+           setDataForCharts(chartComponent, selectedOptions);
+        });
+
         // add a file downloader to the download_data button
         StreamResource resource = new StreamResource((StreamResource.StreamSource) () -> {
             try {

@@ -9,7 +9,8 @@ myGraph.ChartComponent = function (element) {
 
     var data;
     var selectedOptions;
-    var selectedCategoriesForBarChart = null;   // stores the categories selected from the user for the bar chart
+    var selectedCategories = null;   // stores the categories selected from the user for the bar chart and the calendar
+                                     // view
 
     // some variables for the window sizes:
     var w,d,e,windowG,windowX,windowY,vaadin_menu_width,margin,width,height,svg,g,adjusted_height,x,y;
@@ -45,11 +46,15 @@ myGraph.ChartComponent = function (element) {
                 drawLineChart(data, selectedOptions, svg, g, width, adjusted_height);
                 break;
             case "StackedBarChart":
-                selectedCategoriesForBarChart =
+                selectedCategories =
                     drawStackedBarChart(data, selectedOptions, element, svg, g, width, adjusted_height, margin,
-                        selectedCategoriesForBarChart);
+                        selectedCategories);
                 console.log("mygraph after:")
-                console.log(selectedCategoriesForBarChart);
+                console.log(selectedCategories);
+                break;
+            case "CalendarView":
+                drawCalendarView(data, selectedOptions, element, svg, g, width, adjusted_height, margin,
+                    selectedCategories);
                 break;
         }
     }
@@ -88,7 +93,7 @@ myGraph.ChartComponent = function (element) {
             height = windowY - margin.top - margin.bottom - vaadin_top_bar_height;
 
         // remove previously drawn elements
-        d3.select("svg").remove();
+        d3.selectAll("svg").remove();
 
         // adjust the height for the range of the y axis
         adjusted_height = height-margin.top-margin.bottom;

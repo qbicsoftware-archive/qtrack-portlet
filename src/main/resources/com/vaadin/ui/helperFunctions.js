@@ -101,3 +101,44 @@ function removeElementFromDOM(elementId) {
         tooltipElem.parentElement.removeChild(tooltipElem);
     }
 }
+
+
+/**
+ * calculates the total duration of all selected activities on the specified day and returns it
+ * @param day: object holding all the activities on that day
+ * @param selectedActivities: array holding the activities selected by the user
+ * @return {number}: total activity time
+ */
+function calculateTotalTimeForActivities(day, selectedActivities) {
+
+    var totalActivityTime = 0;
+    var activities = day.activities;
+    for (var activity in activities) {
+        if (activities.hasOwnProperty(activity) && (selectedActivities.indexOf(activity) > -1)) {
+            totalActivityTime += activities[activity]
+        }
+    }
+    return totalActivityTime;
+}
+
+
+/**
+ * extracts all the activities of the array of object
+ * @param data: array of objects
+ * @return {*} array with all the activity names, e.g. ["walking", "sleeping", "still"]
+ */
+function extractActivityNames(data) {
+
+    // iterate over the data and push the activity name to the array
+    var activityNames = [];
+    for (var i = 0; i < data.length; i++) {
+        activityNames.push(Object.getOwnPropertyNames(data[i].activities));
+    }
+
+    // create a set to get the activities only once even though they might appear multiple times
+    var uniqueActivityNames = new Set([].concat.apply([], activityNames));
+
+    // convert set back to array and return it
+    return Array.from(uniqueActivityNames);
+}
+
