@@ -25,7 +25,7 @@ unique user id and the dates
 time interval -> sent in .json format to javascript
 * Visualization in javascript using d3
 
-See https://github.com/qbicsoftware/qtrack/blob/master/src/main/README.md
+See https://github.com/qbicsoftware/qtrack/blob/master/src/_README.md
 for a more detailed README on the implementation itself.
 
 ## Setup
