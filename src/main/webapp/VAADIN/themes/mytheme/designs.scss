@@ -72,9 +72,8 @@
          background: lighten($v-background-color, 20%);
          border: valo-border($border: $v-border, $strength: 0.2);
          font-size: $v-font-size * .9;
-         overflow-y: auto;
+         overflow-y: hidden;
          overflow-x: hidden;
-
        }
 
        .menu {

@@ -65,12 +65,10 @@ public class MainView extends MainDesign implements View {
         // add all the listener to the view
         addListenerToView(chartComponent, selectedOptions);
 
-        // TODO: testing
+        // TODO: experimental!!!
+        // creates menu items based on some collection in the database
         List<Document> menuItems = dbConnector.extractMenuItemsCollection();
-        List<Button> buttonList = new ArrayList<>();
         for (Document b : menuItems) {
-            System.out.println(b);
-            System.out.println(b.get("button_caption"));
 
             // create the new button
             Button tempButton = new Button(b.get("button_caption").toString());
@@ -80,26 +78,13 @@ public class MainView extends MainDesign implements View {
 
             // add it on top to the menu
             menu.addComponent(tempButton, 0);
-            buttonList.add(tempButton);
 
             tempButton.addClickListener(event -> {
-                selectedOptions.setPlotSelected("LineChart");
-                viewTitle.setValue("sample data");
+                selectedOptions.setPlotSelected(b.get("plot_selected").toString());
+                viewTitle.setValue(b.get("view_title").toString());
                 setDataForCharts(chartComponent, selectedOptions);
             });
         }
-
-        // List of planets
-/*        ComboBox<String> select = new ComboBox<>("Select or Add a Planet");
-        select.setItems("test213", "lalala", "hehe", "xyz");
-        menu.addComponent(select);
-
-        Button testButton = new Button("test");
-        testButton.setIcon(VaadinIcons.AMBULANCE);
-        testButton.setStyleName("borderless");
-        testButton.setWidth("100%");
-        menu.addComponent(testButton);*/
-
     }
 
     /**
@@ -185,8 +170,8 @@ public class MainView extends MainDesign implements View {
         });
 
         calendar_chart.addClickListener(event -> {
-           selectedOptions.setPlotSelected("CalendarView");
-           viewTitle.setValue("Calendar View");
+           selectedOptions.setPlotSelected("CalendarChart");
+           viewTitle.setValue("Calendar Chart");
            setDataForCharts(chartComponent, selectedOptions);
         });
 
@@ -304,7 +289,6 @@ public class MainView extends MainDesign implements View {
         // on open:         subWindow.setClosable(false);
         // on close:         subWindow.setClosable(true);
         // OR: use a click listener and a boolean which switches its value everytime the colorpicker gets clicked
-
 
         userStepsColorPicker.addValueChangeListener((HasValue.ValueChangeListener<Color>) valueChangeEvent -> {
                 selectedOptions.setColorForUserSteps(valueChangeEvent.getValue());
@@ -447,19 +431,6 @@ public class MainView extends MainDesign implements View {
             }
         });
         fourthColumn.addComponent(timeFormatComboBox);
-
-
-        // select the dot type
-        /*RadioButtonGroup<String> dotTypeRadioButton =
-                //new RadioButtonGroup<>("Select Dot Type");
-                new RadioButtonGroup<>();
-        dotTypeRadioButton.setItems("Circles", "Rectangles", "Triangles");
-        dotTypeRadioButton.setSelectedItem("Circles");
-        dotTypeRadioButton.addValueChangeListener((HasValue.ValueChangeListener<String>) valueChangeEvent -> {
-            selectedOptions.setDotTypeSelection(valueChangeEvent.getValue());
-            Notification.show(valueChangeEvent.getValue());
-        });*/
-        //fourthColumn.addComponent(dotTypeRadioButton);    TODO
 
         VerticalLayout fifthColumn = new VerticalLayout();
         Button confirmSettings = new Button("Ok");

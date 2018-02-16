@@ -1,91 +1,21 @@
-
-
-
 /**
- * creates the tooltip text elements which are displayed when the user is hovering over the dots
- * @param coords: object holding the x and y coords for the text element e.g. {"cx": 10, "cy": 50}
- * to the user or referring to the average
+ * Draws the stacked bar chart with for displaying the user activities.
  */
-function createTooltipTextElements(coords) {
 
-    var textToDisplay = {"selected": "", "notSelected": ""};
-    if (isHoveringOverUserDataPoint) {
-        textToDisplay.selected = "Your Steps: ";
-        textToDisplay.notSelected = "Average Steps: ";
-    } else {
-        textToDisplay.selected = "Average Steps: ";
-        textToDisplay.notSelected = "Your Steps: ";
-    }
-
-    // add the text for the currently selected dot
-    svg.append("text")
-        .attr("dy", ".35em")
-        .attr("y", coords.cy+10)
-        .attr("dx", coords.cx+30)
-        .attr("text-anchor", "end")
-        .style("fill", "black")
-        .style("font-weight", "bold")
-        .style("font-size", "large")
-        .attr("id", "tooltip1")
-        .text(textToDisplay.selected + "" + Math.round(coords.selectedSteps));
-
-    // add the text for the other data point at the same time
-    svg.append("text")
-        .attr("dy", ".35em")
-        .attr("y", coords.cy_other+10)
-        .attr("dx", coords.cx+30)
-        .attr("text-anchor", "end")
-        .style("fill", "black")
-        .style("font-weight", "bold")
-        .style("font-size", "large")
-        .attr("id", "tooltip2")
-        .text(textToDisplay.notSelected + "" + Math.round(coords.notSelectedSteps));
-}
-
-/**
- * removes the element with the elementId from DOM
- * @param: elementId: the Id of the element to remove
- */
-function removeElementFromDOM(elementId) {
-
-    var tooltipElem = document.getElementById(elementId);
-    if (tooltipElem !== null) {
-        tooltipElem.parentElement.removeChild(tooltipElem);
-    }
-}
-
-/**
- * adds event listener to the k-th data point
- * @param k: index of the data point to add the event listener to
- */
-function addEventListenerToDataPoint(k) {
-
-    var event = document.createEvent('Event');
-    event.initEvent('mouseover', true, true);
-
-    document.getElementById(k).addEventListener("mouseover", function() {
-        /*            createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].averagesteps),
-         "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averagesteps,
-         "notSelectedSteps": dat[k].steps}, isUserSelected);*/
-        console.log(data[k]);
-    });
-
-    // when user stops hovering over a dot ..
-    document.getElementById(k).addEventListener("mouseout", function() {
-        // .. delete the tooltip
-        removeElementFromDOM("tooltip1");
-        removeElementFromDOM("tooltip2");
-    });
-}
 
 /**
  * draws the stacked bar chart
- * @param data: array of objects holding the data to plot
- * @param g : svg component
- */
-/**
- * draws the stacked bar chart
- * @param data: object holding the data to plot
+ * @param data: array of objects holding the data: Object { still: 25533517, walking: 1161451, in_vehicle: 1675745, … }
+                                                   averageSteps: 3399.5
+                                                   date: "17-01-2018"
+                                                   in_vehicle: 0.46548472222222226
+                                                   sleeping: 6.65306
+                                                   startDateInUTC: 1516147200000
+                                                   stdErrorOfMean: 1372.5
+                                                   steps: 4772
+                                                   still: 7.092643611111112
+                                                   total: 7.092643611111112
+                                                   walking: 0.3226252777777778
  * @param selectedOptions: options selected by the user; currently not used
  * @param element: element for the svg container
  * @param svg: svg container which holds the g container
@@ -128,7 +58,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     d3.selectAll("svg").remove();
 
     // create the svg with the corresponding size
-    svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
+    var svg = d3.select(element).append("svg:svg").attr("width", width+margin.right).attr("height",
         height+margin.top+margin.bottom);
     g  = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
@@ -216,27 +146,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .append("svg:title")
         .text(function(d) { return timeFormat(d.data.startDateInUTC)});
 
-    /*.on("mouseover", function(d,i) {
-     d3.select(this).attr("fill", function() { return colorRange[colorRange.length-1]});
-     // TODO: last element from color range
-     })
-     .on("mouseout", function(d, i) { d3.select(this).attr("fill", function() {
-     console.log(d);
-     return "";
-     });});*/
-    /*.on("mouseover", function() { tooltip.style("display", null); })
-     .on("mouseout", function() { tooltip.style("display", "none"); })
-     .on("mousemove", function(d,i) {
-     var xPosition = d3.mouse(this)[0] - 5;
-     var yPosition = d3.mouse(this)[1] - 5;
-     tooltip.attr("transform", "translate(" + xPosition + "," + yPosition + ")");
-     tooltip.select("text").text(Math.round((d[1]-d[0])*100)/100);
-     //console.log("i: " + i);
-     //console.log("d: " + d);
-     });*/
-
-    // TODO: tooltips similar to LineChart tooltips
-
     // draw the x axis
     g.append("g")
         .attr("class", "axis")
@@ -308,9 +217,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
                 selectedActivities.push(currentCategory);
             }
 
-            console.log("selected activities:");
-            console.log(selectedActivities);
-
             // redraw the chart with the selected categories
             try {
                 return selectedActivities;
@@ -338,7 +244,7 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .attr("dy", "0.32em")
         .text(function(d) { return d; });
 
-    // TODO: tooltips
+    // TODO: actual tooltips
     // Prep the tooltip bits, initial display is hidden
     var tooltip = svg.append("g")
         .attr("class", "tooltip")
@@ -356,13 +262,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
         .style("text-anchor", "middle")
         .attr("font-size", "12px")
         .attr("font-weight", "bold");
-
-    // add the event listeners for the tooltips to the data points
-/*
-    for (var n = 0; n < data.length; n++) {
-        addEventListenerToDataPoint(n);
-    }
-*/
 
     // send the selected activities back to my graph
     return selectedActivities;

@@ -1,21 +1,21 @@
 /**
- * Holds the drawing stuff.
+ * Calls the respective drawing functions based on the selected options.
  */
 // Define the namespace
 
-var myGraph = myGraph || {};
+var GraphSelector = GraphSelector || {};
 
-myGraph.ChartComponent = function (element) {
+GraphSelector.ChartComponent = function (element) {
 
     var data;
     var selectedOptions;
     var selectedCategories = null;   // stores the categories selected from the user for the bar chart and the calendar
-                                     // view
+                                     // chart
 
     // some variables for the window sizes:
     var w,d,e,windowG,windowX,windowY,vaadin_menu_width,margin,width,height,svg,g,adjusted_height,x,y;
 
-    // this function gets called whenever the data for myGraph has been set
+    // this function gets called whenever the data for GraphSelector has been set
     this.setData = function (dataString, userSelectedOptions) {
     
         // parse the input represented by json 
@@ -52,9 +52,9 @@ myGraph.ChartComponent = function (element) {
                 console.log("mygraph after:")
                 console.log(selectedCategories);
                 break;
-            case "CalendarView":
-                drawCalendarView(data, selectedOptions, element, svg, g, width, adjusted_height, margin,
-                    selectedCategories);
+            case "CalendarChart":
+                selectedCategories = drawCalendarChart(data, selectedOptions, element, svg, g, width, adjusted_height,
+                    margin, selectedCategories);
                 break;
         }
     }
@@ -86,6 +86,9 @@ myGraph.ChartComponent = function (element) {
             vaadin_menu_width = 0;
             vaadin_top_bar_height = 65+37;
         }
+
+        // TODO: testing
+        d.body.style.overflow = "hidden";
 
         // set the margin, the width and the height accordingly
         margin = {top: 10, right: 100, bottom: 30, left: 50},

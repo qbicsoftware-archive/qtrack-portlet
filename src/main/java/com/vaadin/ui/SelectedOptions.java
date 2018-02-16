@@ -3,7 +3,8 @@ package com.vaadin.ui;
 import com.vaadin.shared.ui.colorpicker.Color;
 
 /**
- * object holding all the selected options from the user
+ * object holding all the selected options from the user; object is then used for passing the selected options in json
+ * format to javascript
  */
 class SelectedOptions {
 
@@ -19,14 +20,15 @@ class SelectedOptions {
 
     /**
      * constructor
-     * @param colorForAvgSteps which color the user selected for the avg steps
-     * @param colorForUserSteps which color the user selected for the user steps
+     * @param colorForAvgSteps which color the user selected for the avg steps for the steps line chart
+     * @param colorForUserSteps which color the user selected for the user steps for the steps line chart
      * @param startDate which start date the user has selected
      * @param endDate which end date the user has selected
-     * @param dotTypeSelection which dot types the user has selected
-     * @param timeSelected which time the user has selected
-     * @param plotSelected whether the bar chart or the line chart is selected
-     * @param sortBarsBy whether to sort the bars by date, or in ascending or in descending order
+     * @param dotTypeSelection which dot types the user has selected; TODO: currently not used!
+     * @param timeSelected which time the user has selected: one out of ["Weekly", "Monthly", "Yearly", "Custom"]
+     * @param plotSelected what kind of plot is selected: one out of ["LineChart", "StackedBarChart", "CalendarChart"]
+     * @param sortBarsBy whether to sort the bars by date, or in ascending or in descending order; TODO: currently not
+     *                   used
      */
     SelectedOptions(Color colorForAvgSteps, Color colorForUserSteps, long startDate, long endDate,
                     String dotTypeSelection, String timeSelected, String plotSelected, String sortBarsBy,
@@ -43,8 +45,9 @@ class SelectedOptions {
     }
     
     /**
-     * returns the JSON representation of the object
-     * @return the JSON representation
+     * returns the JSON representation of the fields of the object with key-value pairs:
+     * {"key1": value1, "key2": value2, ..}
+     * @return string in json format
      */
     String getJSONRepresentation() {
 
@@ -116,11 +119,11 @@ class SelectedOptions {
 
     void setPlotSelected(String plotSelected) { this.plotSelected = plotSelected; }
 
-    public String getSortBarsBy() { return sortBarsBy; }
+    String getSortBarsBy() { return sortBarsBy; }
 
-    public void setSortBarsBy(String sortBarsBy) { this.sortBarsBy = sortBarsBy; }
+    void setSortBarsBy(String sortBarsBy) { this.sortBarsBy = sortBarsBy; }
 
-    public String getTimeFormat() { return timeFormat; }
+    String getTimeFormat() { return timeFormat; }
 
-    public void setTimeFormat(String timeFormat) { this.timeFormat = timeFormat; }
+    void setTimeFormat(String timeFormat) { this.timeFormat = timeFormat; }
 }

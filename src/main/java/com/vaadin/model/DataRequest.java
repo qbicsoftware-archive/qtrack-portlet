@@ -11,7 +11,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 /**
- * Requests the data from google fit
+ * Requests the data from Google Fit
  */
 public class DataRequest extends AuthRequest{
 

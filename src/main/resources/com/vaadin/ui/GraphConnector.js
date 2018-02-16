@@ -4,7 +4,7 @@
 window.com_vaadin_ui_ChartComponent = function() {
 
     // Create the component
-    var chart = new myGraph.ChartComponent(this.getElement());
+    var chart = new GraphSelector.ChartComponent(this.getElement());
 
     // Handle changes from the server-side
     this.onStateChange = function() {

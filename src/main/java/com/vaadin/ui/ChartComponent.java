@@ -3,12 +3,12 @@ package com.vaadin.ui;
 import com.vaadin.annotations.JavaScript;
 
 // these .js files are associated with the ChartComponent
-@JavaScript({"d3.v4.min.js", "myGraphConnector.js", "myGraph.js", "helperFunctions.js", "StackedBarChart.js",
-        "LineChart.js", "CalendarView.js"})
+@JavaScript({"d3.v4.min.js", "GraphConnector.js", "GraphSelector.js", "HelperFunctions.js", "StackedBarChart.js",
+        "LineChart.js", "CalendarChart.js"})
 
 /*
- * Represents the charts created in myGraph.js; calling the function setData calls the identically named function within
- * the myGraph.js which results in redrawing of the javascript content
+ * Represents the charts created in GraphSelector.js; calling the function setData calls the identically named function within
+ * the GraphSelector.js which results in redrawing of the javascript content
  */
 public class ChartComponent extends AbstractJavaScriptComponent{
 

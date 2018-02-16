@@ -3,6 +3,7 @@ package com.vaadin.model;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.*;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.util.JSON;
 import org.bson.Document;
@@ -30,6 +31,7 @@ public class DbConnector extends MongoClient {
     // maps the integer to the corresponding activity
     private Map<Integer, String> activityTypesValuesMapper = new HashMap<Integer, String>() {
         {
+            // TODO: to query more activities from google fit simply add them to this hash map
             put(0, "in_vehicle");
             put(1, "on_bicycle");
             put(2, "on_foot");
@@ -51,12 +53,44 @@ public class DbConnector extends MongoClient {
      * @param sessionUserID: the user session id
      */
     public DbConnector(String sessionUserID) {
+        // get the database; create it if it doesn't exist yet
         this.db = getDatabase("trackFit");
         this.sessionUserID = sessionUserID;
+
+        // check if the user collection exists
+        if (!this.db.listCollectionNames().into(new ArrayList<>()).contains("steps")) {
+            // create the steps collection
+            stepColl = db.getCollection("steps");
+
+            // create the indexes for the collections for faster querying
+            stepColl.createIndex(Indexes.ascending("startDateInUTC", "user"));
+            stepColl.createIndex(Indexes.ascending("startDateInUTC", "user", "endDateInUTC"));
+        }
+
+        // check if the activities collection exists
+        if (!this.db.listCollectionNames().into(new ArrayList<>()).contains("activities")) {
+            // create the activities collection
+            activityColl = db.getCollection("activities");
+
+            // create the indexes for the collections for faster querying
+            activityColl.createIndex(Indexes.ascending("dateInUTC", "user"));
+        }
+
+        // check if the days collection exists
+        if (!this.db.listCollectionNames().into(new ArrayList<>()).contains("days")) {
+            // create the days collection
+            daysColl = db.getCollection("days");
+
+            // create the indexes for the collections for faster querying
+            daysColl.createIndex(Indexes.ascending("startDateInUTC", "user"));
+        }
+
+        // get the different collections
         userColl = db.getCollection("users");
         stepColl = db.getCollection("steps");
         daysColl = db.getCollection("days");
         activityColl = db.getCollection("activities");
+
     }
 
     /**
@@ -160,25 +194,30 @@ public class DbConnector extends MongoClient {
                 }
             }
 
-            // we don't have any steps data ..
-            if (steps < 0) {
-                // .. so we need to create some random data
-                steps = createRandomData(250, 5000);
-            }
-            // we don't have any activity data ..
-            if (activities.size() < 1) {
+            // TODO: if you don't want random data
+            boolean generateRandomData = true;
+            if (generateRandomData) {
 
-                // .. so we need to create some random activity data
-                int nanoSecondsToHours = 1000 * 60 * 60;        // activity duration is stored in nano seconds
+                // we don't have any steps data ..
+                if (steps < 0) {
+                    // .. so we need to create some random data
+                    steps = createRandomData(250, 5000);
+                }
+                // we don't have any activity data ..
+                if (activities.size() < 1) {
 
-                // 6-8h of sleeping
-                activities.put("sleeping", createRandomData(nanoSecondsToHours * 6, nanoSecondsToHours * 8));
-                // 10mins to 2 hours of walking
-                activities.put("walking", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
-                // 2-8h of still activity
-                activities.put("still", createRandomData(nanoSecondsToHours * 2, nanoSecondsToHours * 8));
-                // 10mins to 2 hours of vehicle
-                activities.put("in_vehicle", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
+                    // .. so we need to create some random activity data
+                    int nanoSecondsToHours = 1000 * 60 * 60;        // activity duration is stored in nano seconds
+
+                    // 6-8h of sleeping
+                    activities.put("sleeping", createRandomData(nanoSecondsToHours * 6, nanoSecondsToHours * 8));
+                    // 10mins to 2 hours of walking
+                    activities.put("walking", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
+                    // 2-8h of still activity
+                    activities.put("still", createRandomData(nanoSecondsToHours * 2, nanoSecondsToHours * 8));
+                    // 10mins to 2 hours of vehicle
+                    activities.put("in_vehicle", createRandomData(nanoSecondsToHours / 6, nanoSecondsToHours * 2));
+                }
             }
 
             // Convert timeInMillis to long
@@ -191,12 +230,6 @@ public class DbConnector extends MongoClient {
             stepsDocument.remove("startTimeMillis");
             stepsDocument.remove("endTimeMillis");
 
-/*      TODO: remove
-            // store steps in the database with the user id as identifier
-            Bson stepFilter = and(eq("user", sessionUserID), eq("startDateInUTC", dateInUTC));
-            stepColl.replaceOne(stepFilter, document, new UpdateOptions().upsert(true));
-*/
-
             // create the document for the activities
             Document activityDoc = new Document("user", sessionUserID);
             activityDoc.put("activities", activities);
@@ -208,6 +241,7 @@ public class DbConnector extends MongoClient {
 
             // Update Days Collection
             storeDayAndSteps(dateInUTC, steps, stepsDocument);
+
         });
     }
 
@@ -240,11 +274,13 @@ public class DbConnector extends MongoClient {
         sumsForMeanAndSEM.put("sum1", sum1);
         sumsForMeanAndSEM.put("sum2", sum2);
 
-        // day is already in the collection
-        if (daysColl.count(eq("_id", date)) > 0) {
+        // query the database for the current date
+        BasicDBObject whereQuery = new BasicDBObject();
+        whereQuery.put("dateInUTC", date);
+        Document dayDoc = daysColl.find(whereQuery).limit(1).first();
 
-            // get the day document
-            Document dayDoc = daysColl.find(eq("_id", date)).first();
+        // day is already in the collection
+        if (dayDoc != null) {
 
             // query the steps collection for the current date and user
             BasicDBObject andQuery = new BasicDBObject();
@@ -252,10 +288,12 @@ public class DbConnector extends MongoClient {
             queryFields.add(new BasicDBObject("user", sessionUserID));
             queryFields.add(new BasicDBObject("startDateInUTC", date));
             andQuery.put("$and", queryFields);
-            FindIterable<Document> cursor = stepColl.find(andQuery);
+            Document stepsDoc = stepColl.find(andQuery).limit(1).first();
 
             // check if we have data from that user for the current day
-            if (cursor.first() != null) {
+            if (stepsDoc != null) {
+                // day is in the collection and the users data for that day is in the collection, so we don't need to
+                // do anything ..
                 return;
             // we don't have the data from this user for this day
             } else {
@@ -278,7 +316,7 @@ public class DbConnector extends MongoClient {
         // calculate the mean and the stdErrorOfMean (SEM)
         double mean = sum1/sum0;
         double stdDev = 0;
-        if (sum0 > 2) {
+        if (sum0 >= 2) {	// we need at least two datapoints
             stdDev = Math.sqrt((sum0 * sum2 - sum1 * sum1)/(sum0 * (sum0 - 1)));
         }
         double stdErrorOfMean = stdDev/Math.sqrt(sum0);
@@ -289,7 +327,7 @@ public class DbConnector extends MongoClient {
         sumsForMeanAndSEM.put("sum2", sum2);
 
         // create a new document for the current day
-        Document newDayDoc = new Document("_id", date);
+        Document newDayDoc = new Document();
 
         // put the values we want to store in the database in the new document
         newDayDoc.put("sumsForMeanAndSEM", sumsForMeanAndSEM);
@@ -301,8 +339,9 @@ public class DbConnector extends MongoClient {
         Bson stepFilter = and(eq("user", sessionUserID), eq("startDateInUTC", date));
         stepColl.replaceOne(stepFilter, stepsDocument, new UpdateOptions().upsert(true));
 
-        // store the current day in the database with the date as identifier
-        daysColl.replaceOne(eq("_id", date), newDayDoc, new UpdateOptions().upsert(true));
+        // store the current day in the database
+        daysColl.replaceOne(eq("dateInUTC", date), newDayDoc, new UpdateOptions().upsert(true));
+
     }
 
     /**
@@ -323,18 +362,28 @@ public class DbConnector extends MongoClient {
         return userColl.find(eq("_id", userID)).first().getString("name");
     }
 
+    /**
+     * TODO: experimental!
+     * extracts the menu items which should be created and displayed from a collection in the database
+     * @return ArrayList of MongoDB documents
+     */
     public List<Document> extractMenuItemsCollection() {
 
-        List<Document> docList = new ArrayList<>();
+        // collection named menu_items should have document with entries like this:
+        /*
+        button_caption: "Sample Chart"      // the caption for the button
+        button_icon: "BOOKMARK"             // the vaadin icon for the button
+        view_title: "Showing sample data"   // the title of the chart which is displayed in the top left corner
+        plot_selected: "LineChart"          // ["LineChart", "StackedBarChart", "CalendarChart"] what kind of plot
+                                               should be drawn
+         */
 
+        List<Document> docList = new ArrayList<>();
         try (MongoCursor<Document> cursor = db.getCollection("menu_items").find().iterator()) {
             while (cursor.hasNext()) {
                 docList.add(cursor.next());
-                // System.out.println(cursor.next().toJson());
             }
         }
-
-        // return JSON.serialize(docList);
         return docList;
     }
 
@@ -362,7 +411,7 @@ public class DbConnector extends MongoClient {
 
                 // we want the average steps from the days collection
                 lookup(
-                        "days", "startDateInUTC", "_id", "means"
+                        "days", "startDateInUTC", "dateInUTC", "means"
                 ),
 
                 // reshape the document by including only the startMillis, steps and average fields

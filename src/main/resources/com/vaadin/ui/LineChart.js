@@ -1,5 +1,6 @@
-
-
+/**
+ * Draws the line chart displaying the steps data.
+ */
 
 /**
  * draws the line chart displaying the step data for the user and the average of other users
@@ -16,8 +17,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
     // set the ranges for the axis
     var x = d3.scaleLinear().range([10, width]);
     var y = d3.scaleLinear().range([height, 0]);
-
-    console.log(dat);
 
     // Scale the range of the data
     x.domain(d3.extent(dat, function(d) { return d.startDateInUTC; }));
@@ -42,7 +41,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("stroke-width", "3px");
 
     // time format for the dates
-    // var timeFormat = d3.timeFormat("%d-%m-%Y");
     var timeFormat = d3.timeFormat(selectedOptions.timeFormat);
 
     // add the circles to select the tooltips
@@ -52,7 +50,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("r", 5)
         .attr("cx", function(d) { return x(d.startDateInUTC); })
         .attr("cy", function(d) { return y(d.steps); })
-        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("transform", "translate(50,12)")
         .attr("fill", selectedOptions.colorForUserSteps)
         .attr("id", function(d,i) { return "user_"+i; })
         .append("svg:title")
@@ -73,12 +71,11 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("r", 5)
         .attr("cx", function(d) { return x(d.startDateInUTC); })
         .attr("cy", function(d) { return y(d.averageSteps); })
-        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("transform", "translate(50,12)")
         .attr("fill", selectedOptions.colorForAvgSteps)
         .attr("id", function(d,i) { return "avg_"+i; })
         .append("svg:title")
         .text(function(d, i) { return timeFormat(d.startDateInUTC)});
-
 
     // Add Error Line
     svg.append("g").selectAll("line")
@@ -97,7 +94,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("y2", function(d) {
             return y(d.averageSteps - d.stdErrorOfMean);
         })
-        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("transform", "translate(50,12)")
         .attr("stroke-width", 2)
         .style("stroke-dasharray", ("3, 3"))
         .attr("stroke", "black");
@@ -119,7 +116,7 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("y2", function(d) {
       	    return y(d.averageSteps + d.stdErrorOfMean);
         })
-        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("transform", "translate(50,12)")
         .attr("stroke-width", 2)
         .attr("stroke", "black");
 
@@ -140,10 +137,9 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("y2", function(d) {
         	return y(d.averageSteps - d.stdErrorOfMean);
         })
-        .attr("transform", "translate(50,12)")  // TODO: no more hardcoded; based on margin
+        .attr("transform", "translate(50,12)")
         .attr("stroke-width", 2)
         .attr("stroke", "black");
-
 
     /**
      * creates the tooltip text elements which are displayed when the user is hovering over the dots
@@ -197,9 +193,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         event.initEvent('mouseover', true, true);
 
         document.getElementById("avg_"+k).addEventListener("mouseover", function() {
-            console.log("mouse over avg" + k);
-            console.log(x(dat[k].startDateInUTC));
-            console.log(y(dat[k].averageSteps));
             var isUserSelected = false;
             createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].averageSteps),
                 "cy_other": y(dat[k].steps), "selectedSteps": dat[k].averageSteps,
@@ -207,9 +200,6 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         });
 
         document.getElementById("user_"+k).addEventListener("mouseover", function() {
-            console.log("mouse over user" + k);
-            console.log(x(dat[k].startDateInUTC));
-            console.log(y(dat[k].steps));
             var isUserSelected = true;
             createTooltipTextElements({"cx": x(dat[k].startDateInUTC), "cy": y(dat[k].steps),
                 "cy_other": y(dat[k].averageSteps), "selectedSteps": dat[k].steps,
@@ -231,13 +221,10 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         });
     }
 
-
     // add the event listeners for the tooltips to the data points
     for (var k = 0; k < dat.length; k++) {
         addEventListenerToDataPoint(k, x, y);
     }
-
-
 
     // Add the X Axis
     g.append("g")
@@ -287,5 +274,4 @@ function drawLineChart(dat, selectedOptions, svg, g, width, height) {
         .attr("y", 9.5)
         .attr("dy", "0.32em")
         .text(function(d) { return d; });
-
 }

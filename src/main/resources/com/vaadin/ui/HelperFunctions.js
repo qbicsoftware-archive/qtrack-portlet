@@ -1,4 +1,8 @@
 /**
+ * Holds sum functions for the different charts which are not directly related with drawing.
+ */
+
+/**
  * computes the sum of the array
  * @param array
  * @return {number}: sum of the array

@@ -1620,7 +1620,7 @@ div.v-layout.v-horizontal.v-widget {
 	background: white;
 	border: 1px solid #efefef;
 	font-size: 14.4px;
-	overflow-y: auto;
+	overflow-y: hidden;
 	overflow-x: hidden;
 }
 
