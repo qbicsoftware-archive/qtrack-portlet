@@ -31,7 +31,7 @@ public class DbConnector extends MongoClient {
     // maps the integer to the corresponding activity
     private Map<Integer, String> activityTypesValuesMapper = new HashMap<Integer, String>() {
         {
-            // TODO: to query more activities from google fit simply add them to this hash map
+            // TODO: to extract more activities from google fit simply add them to this hash map
             put(0, "in_vehicle");
             put(1, "on_bicycle");
             put(2, "on_foot");

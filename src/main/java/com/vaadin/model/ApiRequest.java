@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * deals with the google fit api request, the OAuth 2.0 and the client secret
+ * Deals with the google fit api request, the OAuth 2.0 and the client secret
  */
 class ApiRequest {
 

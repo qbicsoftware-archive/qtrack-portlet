@@ -92,7 +92,6 @@ function createHorizontalColorScaleLegend(element, width, colorScaleLegendHeight
                                                      stdErrorOfMean: 1372.5
                                                      steps: 4772
                                                      still: 7.092643611111112
-                                                     total: 7.092643611111112
                                                      walking: 0.3226252777777778
  * @param selectedOptions: options selected by the user; currently not used
  * @param element: element for the svg container

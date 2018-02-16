@@ -77,9 +77,6 @@ public class DataRequest extends AuthRequest{
                     .aggregate("me", aggRequest).execute();
         }
 
-        //System.out.println("aggResponse");
-        //System.out.println(aggResponse.toPrettyString());
-
         return aggResponse.toString();
     }
 

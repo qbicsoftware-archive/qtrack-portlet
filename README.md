@@ -25,6 +25,7 @@ unique user id and the dates
 time interval -> sent in .json format to javascript
 * Visualization in javascript using d3
 
+
 ## Setup
 
 * Install the lastest version of MongoDB:
@@ -47,6 +48,9 @@ available via GoogleFit; this can be disabled in the DbConnector class
 in the storeData function.
 
 ## Available Visualizations
+
+![alt text](doc/imgs/mainView.png)
+
 ### Visualization of steps data
 
 ![alt text](doc/imgs/stepsLineChartExample.png)

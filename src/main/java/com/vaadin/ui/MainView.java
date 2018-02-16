@@ -66,24 +66,26 @@ public class MainView extends MainDesign implements View {
         addListenerToView(chartComponent, selectedOptions);
 
         // TODO: experimental!!!
-        // creates menu items based on some collection in the database
-        List<Document> menuItems = dbConnector.extractMenuItemsCollection();
-        for (Document b : menuItems) {
+        if (false) {
+            // creates menu items based on some collection in the database
+            List<Document> menuItems = dbConnector.extractMenuItemsCollection();
+            for (Document b : menuItems) {
 
-            // create the new button
-            Button tempButton = new Button(b.get("button_caption").toString());
-            tempButton.setIcon(VaadinIcons.valueOf(b.get("button_icon").toString()));
-            tempButton.setStyleName("borderless");
-            tempButton.setWidth("100%");
+                // create the new button
+                Button tempButton = new Button(b.get("button_caption").toString());
+                tempButton.setIcon(VaadinIcons.valueOf(b.get("button_icon").toString()));
+                tempButton.setStyleName("borderless");
+                tempButton.setWidth("100%");
 
-            // add it on top to the menu
-            menu.addComponent(tempButton, 0);
+                // add it on top to the menu
+                menu.addComponent(tempButton, 0);
 
-            tempButton.addClickListener(event -> {
-                selectedOptions.setPlotSelected(b.get("plot_selected").toString());
-                viewTitle.setValue(b.get("view_title").toString());
-                setDataForCharts(chartComponent, selectedOptions);
-            });
+                tempButton.addClickListener(event -> {
+                    selectedOptions.setPlotSelected(b.get("plot_selected").toString());
+                    viewTitle.setValue(b.get("view_title").toString());
+                    setDataForCharts(chartComponent, selectedOptions);
+                });
+            }
         }
     }
 

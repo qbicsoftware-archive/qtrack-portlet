@@ -14,7 +14,6 @@
                                                    stdErrorOfMean: 1372.5
                                                    steps: 4772
                                                    still: 7.092643611111112
-                                                   total: 7.092643611111112
                                                    walking: 0.3226252777777778
  * @param selectedOptions: options selected by the user; currently not used
  * @param element: element for the svg container
@@ -76,7 +75,6 @@ function drawStackedBarChart(data, selectedOptions, element, svg, g, width, heig
     var colorRange =
         ['#a6cee3','#1f78b4','#b2df8a','#33a02c','#fb9a99','#e31a1c','#fdbf6f','#ff7f00','#cab2d6','#6a3d9a'];
     var colorScale = d3.scaleOrdinal()
-    //.range(['#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00','#ffff33','#a65628','#f781bf','#999999']);
         .range(colorRange);
 
     // time format for the dates

@@ -7,13 +7,12 @@ import com.vaadin.annotations.JavaScript;
         "LineChart.js", "CalendarChart.js"})
 
 /*
- * Represents the charts created in GraphSelector.js; calling the function setData calls the identically named function within
- * the GraphSelector.js which results in redrawing of the javascript content
+ * Represents the charts created in GraphSelector.js; calling the function setData calls the identically named function
+ * within the GraphSelector.js which results in redrawing of the javascript content
  */
 public class ChartComponent extends AbstractJavaScriptComponent{
 
     void setData(String data, String selectedOptions) {
-
         getState().data = data;
         getState().selectedOptions = selectedOptions;
     }

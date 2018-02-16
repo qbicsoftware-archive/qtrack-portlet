@@ -1,5 +1,5 @@
 /**
- * Holds sum functions for the different charts which are not directly related with drawing.
+ * Holds some functions for the different charts which are not directly related with drawing.
  */
 
 /**
